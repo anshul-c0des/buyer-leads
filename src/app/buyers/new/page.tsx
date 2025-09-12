@@ -1,15 +1,21 @@
-'use client'
+"use client"
 
-import { useForm, Controller } from 'react-hook-form'
-import { zodResolver } from '@hookform/resolvers/zod'
-import { buyerSchema } from '@/lib/zod/buyerSchema'
-import { z } from 'zod'
-import { useState } from 'react'
-import { Input } from '@/components/ui/input'
-import { Button } from '@/components/ui/button'
-import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { buyerSchema } from "@/lib/zod/buyerSchema"
+import { z } from "zod"
+import { useState } from "react"
+import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 type FormData = z.infer<typeof buyerSchema>
 
@@ -25,26 +31,31 @@ export default function NewBuyerPage() {
   })
 
   const [submitting, setSubmitting] = useState(false)
-  const propertyType = watch('propertyType')
+  const propertyType = watch("propertyType")
 
   const onSubmit = async (data: FormData) => {
+    console.log("Submitting data:", data) // log data being sent
     setSubmitting(true)
+
     try {
-      const res = await fetch('/api/buyers', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/buyers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       })
 
+      console.log("Response status:", res.status)
       const result = await res.json()
+      console.log("Response JSON:", result)
+
       if (!res.ok) {
-        alert(result.message || 'Error creating lead')
+        alert(result.message || "Error creating lead")
       } else {
-        alert('Lead created successfully!')
+        alert("Lead created successfully!")
       }
     } catch (err) {
-      console.error(err)
-      alert('Something went wrong.')
+      console.error("Fetch error:", err)
+      alert("Something went wrong.")
     } finally {
       setSubmitting(false)
     }
@@ -58,7 +69,7 @@ export default function NewBuyerPage() {
         {/* Full Name */}
         <div className="space-y-2">
           <Label htmlFor="fullName">Full Name</Label>
-          <Input id="fullName" {...register('fullName')} />
+          <Input id="fullName" {...register("fullName")} />
           {errors.fullName && (
             <p className="text-sm text-red-500">{errors.fullName.message}</p>
           )}
@@ -67,7 +78,7 @@ export default function NewBuyerPage() {
         {/* Email */}
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
-          <Input id="email" {...register('email')} />
+          <Input id="email" {...register("email")} />
           {errors.email && (
             <p className="text-sm text-red-500">{errors.email.message}</p>
           )}
@@ -76,7 +87,7 @@ export default function NewBuyerPage() {
         {/* Phone */}
         <div className="space-y-2">
           <Label htmlFor="phone">Phone</Label>
-          <Input id="phone" {...register('phone')} />
+          <Input id="phone" {...register("phone")} />
           {errors.phone && (
             <p className="text-sm text-red-500">{errors.phone.message}</p>
           )}
@@ -134,45 +145,194 @@ export default function NewBuyerPage() {
           )}
         </div>
 
-        {/* BHK (conditional) */}
-        {['Apartment', 'Villa'].includes(propertyType ?? '') && (
+        {/* BHK (conditional for Apartment or Villa) */}
+        {["Apartment", "Villa"].includes(propertyType ?? "") && (
           <div className="space-y-2">
             <Label>BHK</Label>
-                <Controller
-                    name="bhk"
-                    control={control}
-                    render={({ field }) => (
-                        <Select onValueChange={field.onChange} value={field.value ?? undefined}>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select BHK" />
-                        </SelectTrigger>
-                        <SelectContent>
-                            <SelectItem value="Studio">Studio</SelectItem>
-                            <SelectItem value="1">1</SelectItem>
-                            <SelectItem value="2">2</SelectItem>
-                            <SelectItem value="3">3</SelectItem>
-                            <SelectItem value="4">4</SelectItem>
-                        </SelectContent>
-                        </Select>
-                    )}
-                />
+            <Controller
+              name="bhk"
+              control={control}
+              render={({ field }) => (
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value ?? undefined}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select BHK" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Studio">Studio</SelectItem>
+                    <SelectItem value="1">1</SelectItem>
+                    <SelectItem value="2">2</SelectItem>
+                    <SelectItem value="3">3</SelectItem>
+                    <SelectItem value="4">4</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {errors.bhk && (
               <p className="text-sm text-red-500">{errors.bhk.message}</p>
             )}
           </div>
         )}
 
+        {/* Purpose */}
+        <div className="space-y-2">
+          <Label>Purpose</Label>
+          <Controller
+            name="purpose"
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select purpose" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Buy">Buy</SelectItem>
+                  <SelectItem value="Rent">Rent</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.purpose && (
+            <p className="text-sm text-red-500">{errors.purpose.message}</p>
+          )}
+        </div>
+
+        {/* Budget Min */}
+        <div className="space-y-2">
+          <Label htmlFor="budgetMin">Minimum Budget (INR)</Label>
+          <Input
+            id="budgetMin"
+            type="number"
+            {...register("budgetMin", { valueAsNumber: true })}
+          />
+          {errors.budgetMin && (
+            <p className="text-sm text-red-500">{errors.budgetMin.message}</p>
+          )}
+        </div>
+
+        {/* Budget Max */}
+        <div className="space-y-2">
+          <Label htmlFor="budgetMax">Maximum Budget (INR)</Label>
+          <Input
+            id="budgetMax"
+            type="number"
+            {...register("budgetMax", { valueAsNumber: true })}
+          />
+          {errors.budgetMax && (
+            <p className="text-sm text-red-500">{errors.budgetMax.message}</p>
+          )}
+        </div>
+
+        {/* Timeline */}
+        <div className="space-y-2">
+          <Label>Timeline</Label>
+          <Controller
+            name="timeline"
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select timeline" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ZeroToThreeMonths">0-3 months</SelectItem>
+                  <SelectItem value="ThreeToSixMonths">3-6 months</SelectItem>
+                  <SelectItem value="MoreThanSixMonths">&gt; 6 months</SelectItem>
+                  <SelectItem value="Exploring">Exploring</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.timeline && (
+            <p className="text-sm text-red-500">{errors.timeline.message}</p>
+          )}
+        </div>
+
+        {/* Source */}
+        <div className="space-y-2">
+          <Label>Source</Label>
+          <Controller
+            name="source"
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Website">Website</SelectItem>
+                  <SelectItem value="Referral">Referral</SelectItem>
+                  <SelectItem value="Walk-in">Walk-in</SelectItem>
+                  <SelectItem value="Call">Call</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.source && (
+            <p className="text-sm text-red-500">{errors.source.message}</p>
+          )}
+        </div>
+
+        {/* Status */}
+        <div className="space-y-2">
+          <Label>Status</Label>
+          <Controller
+            name="status"
+            control={control}
+            defaultValue="New"
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="New">New</SelectItem>
+                  <SelectItem value="Qualified">Qualified</SelectItem>
+                  <SelectItem value="Contacted">Contacted</SelectItem>
+                  <SelectItem value="Visited">Visited</SelectItem>
+                  <SelectItem value="Negotiation">Negotiation</SelectItem>
+                  <SelectItem value="Converted">Converted</SelectItem>
+                  <SelectItem value="Dropped">Dropped</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.status && (
+            <p className="text-sm text-red-500">{errors.status.message}</p>
+          )}
+        </div>
+
         {/* Notes */}
         <div className="space-y-2">
           <Label htmlFor="notes">Notes</Label>
-          <Textarea id="notes" {...register('notes')} />
+          <Textarea id="notes" {...register("notes")} />
           {errors.notes && (
             <p className="text-sm text-red-500">{errors.notes.message}</p>
           )}
         </div>
 
+        {/* Tags */}
+        <div className="space-y-2">
+          <Label htmlFor="tags">Tags (comma separated)</Label>
+          <Input
+            id="tags"
+            {...register("tags", {
+              setValueAs: (v) =>
+                typeof v === "string"
+                  ? v.split(",").map((tag) => tag.trim()).filter(Boolean)
+                  : [],
+            })}
+          />
+          {errors.tags && (
+            <p className="text-sm text-red-500">{errors.tags.message}</p>
+          )}
+        </div>
+
         <Button type="submit" disabled={submitting}>
-          {submitting ? 'Submitting...' : 'Create Lead'}
+          {submitting ? "Submitting..." : "Create Lead"}
         </Button>
       </form>
     </div>

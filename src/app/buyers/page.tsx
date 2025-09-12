@@ -72,6 +72,14 @@ export default function BuyersPage() {
   // Update URL and filters when user changes filter/search/page
   function updateFilters(updated: Partial<Filters>) {
     const newFilters = { ...filters, ...updated, page: 1 } // reset page to 1 on filter change
+
+    // Convert 'all' to empty string to disable filter
+    for (const key of ['city', 'propertyType', 'status', 'timeline'] as const) {
+      if (newFilters[key] === 'all') {
+        newFilters[key] = ''
+      }
+    }
+
     setFilters(newFilters)
 
     const params = new URLSearchParams()

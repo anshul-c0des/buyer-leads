@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 export const buyerSchema = z.object({
     fullName: z.string().min(2, 'Full name must be at least 2 characters'),
-    email: z.string().email('Invalid email').optional().nullable(),
+    email: z.string().email('Invalid email').optional().or(z.literal('').transform(() => undefined)),
     phone: z.string().regex(/^\d{10,15}$/, 'Phone must be 10 to 15 digits'),
     city: z.enum(['Chandigarh', 'Mohali', 'Zirakpur', 'Panchkula', 'Other']),
     propertyType: z.enum(['Apartment', 'Villa', 'Plot', 'Office', 'Retail']),
@@ -17,6 +17,17 @@ export const buyerSchema = z.object({
       'Exploring',
     ]),
     source: z.enum(['Website', 'Referral', 'WalkIn', 'Call', 'Other']),
+    status: z
+    .enum([
+      'New',
+      'Qualified',
+      'Contacted',
+      'Visited',
+      'Negotiation',
+      'Converted',
+      'Dropped',
+    ])
+    .default('New'),
     notes: z.string().max(1000, 'Notes must be 1000 characters or less').optional(),
     tags: z.array(z.string()).optional(),
   })
