@@ -69,16 +69,23 @@ export async function POST(req: Request) {
 
     const data = buyerSchema.parse(body)
 
+    const bhk = mapBhkToPrisma(data.bhk)
+
+    const buyerData: any = {
+      ...data,
+      timeline: mapTimelineToPrisma(data.timeline),
+      source: mapSourceToPrisma(data.source),
+      tags: data.tags ?? [],
+      ownerId: 'demo-user',
+    }
+
+    if (bhk !== null) {
+      buyerData.bhk = bhk
+    }
+
     const buyer = await prisma.buyer.create({
-      data: {
-        ...data,
-        bhk: mapBhkToPrisma(data.bhk),
-        timeline: mapTimelineToPrisma(data.timeline),
-        source: mapSourceToPrisma(data.source),
-        tags: data.tags ?? [],
-        ownerId: 'demo-user',
-      },
-    })  
+      data: buyerData,
+    }) 
 
     await prisma.buyerHistory.create({
       data: {

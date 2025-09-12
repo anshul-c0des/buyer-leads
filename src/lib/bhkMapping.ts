@@ -8,7 +8,7 @@ const bhkMap: Record<string, BHK> = {
   '4': BHK.Four,
 }
 
-export function mapBhkToPrisma(bhk?: string | null): BHK | null {
+export function mapBhkToPrisma(bhk?: string): BHK | null {
   if (!bhk) return null
   return bhkMap[bhk] ?? null
 }
