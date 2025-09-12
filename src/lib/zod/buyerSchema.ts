@@ -6,7 +6,9 @@ export const buyerSchema = z.object({
     phone: z.string().regex(/^\d{10,15}$/, 'Phone must be 10 to 15 digits'),
     city: z.enum(['Chandigarh', 'Mohali', 'Zirakpur', 'Panchkula', 'Other']),
     propertyType: z.enum(['Apartment', 'Villa', 'Plot', 'Office', 'Retail']),
-    bhk: z.enum(['Studio', '1', '2', '3', '4']).optional(),
+    bhk: z.enum(['Studio', '1', '2', '3', '4']).nullable()
+    .transform((val) => (val === null ? undefined : val))
+    .optional(),
     purpose: z.enum(['Buy', 'Rent']),
     budgetMin: z.coerce.number().optional(),
     budgetMax: z.coerce.number().optional(),

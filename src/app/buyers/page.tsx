@@ -3,7 +3,6 @@
 import { useState, useEffect, useTransition } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useDebounce } from 'use-debounce'
-
 import { Input } from '@/components/ui/input'
 import {
   Select,
@@ -203,6 +202,7 @@ export default function BuyersPage() {
             <th className="border border-gray-300 p-2 text-left">Timeline</th>
             <th className="border border-gray-300 p-2 text-left">Status</th>
             <th className="border border-gray-300 p-2 text-left">Updated At</th>
+            <th className="border border-gray-300 p-2 text-left">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -227,6 +227,11 @@ export default function BuyersPage() {
               <td className="border border-gray-300 p-2">{buyer.status}</td>
               <td className="border border-gray-300 p-2">
                 {new Date(buyer.updatedAt).toLocaleString()}
+              </td>
+              <td className="border border-gray-300 p-2">
+                <Button size="sm" onClick={() => router.push(`/buyers/${buyer.id}`)}>
+                  Edit
+                </Button>
               </td>
             </tr>
           ))}

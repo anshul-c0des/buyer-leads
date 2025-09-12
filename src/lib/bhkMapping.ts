@@ -20,12 +20,13 @@ export const timelineMap: Record<string, Timeline> = {
   Exploring: Timeline.Exploring,
 }
 
-export function mapTimelineToPrisma(t?: string): Timeline | null {
+export function mapTimelineToPrisma(t?: string): Timeline {
   if (!t || !(t in timelineMap)) {
     throw new Error(`Invalid timeline value: ${t}`)
   }
   return timelineMap[t]
 }
+
 
 export const sourceMap: Record<string, Source> = {
   Website: Source.Website,
@@ -34,8 +35,7 @@ export const sourceMap: Record<string, Source> = {
   Call: Source.Call,
   Other: Source.Other,
 }
-
-export function mapSourceToPrisma(s?: string): Source | null {
+export function mapSourceToPrisma(s?: string): Source {
   if (!s || !(s in sourceMap)) {
     throw new Error(`Invalid source value: ${s}`)
   }

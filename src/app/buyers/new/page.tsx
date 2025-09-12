@@ -34,7 +34,6 @@ export default function NewBuyerPage() {
   const propertyType = watch("propertyType")
 
   const onSubmit = async (data: FormData) => {
-    console.log("Submitting data:", data) // log data being sent
     setSubmitting(true)
 
     try {
@@ -44,9 +43,7 @@ export default function NewBuyerPage() {
         body: JSON.stringify(data),
       })
 
-      console.log("Response status:", res.status)
       const result = await res.json()
-      console.log("Response JSON:", result)
 
       if (!res.ok) {
         alert(result.message || "Error creating lead")
