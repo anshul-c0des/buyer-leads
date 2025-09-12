@@ -101,6 +101,13 @@ export default function BuyersPage() {
     updateFilters({ page: newPage })
   }
 
+  const timelineLabels: Record<string, string> = {
+    ZeroToThreeMonths: '0-3 months',
+    ThreeToSixMonths: '3-6 months',
+    MoreThanSixMonths: '>6 months',
+    Exploring: 'Exploring',
+  }  
+
   return (
     <div className="max-w-6xl mx-auto p-6">
       <h1 className="text-2xl font-bold mb-6">Buyer Leads</h1>
@@ -216,7 +223,7 @@ export default function BuyersPage() {
               <td className="border border-gray-300 p-2">
                 {buyer.budgetMin ?? '-'} - {buyer.budgetMax ?? '-'}
               </td>
-              <td className="border border-gray-300 p-2">{buyer.timeline}</td>
+              <td className="border border-gray-300 p-2">{timelineLabels[buyer.timeline] ?? buyer.timeline}</td>
               <td className="border border-gray-300 p-2">{buyer.status}</td>
               <td className="border border-gray-300 p-2">
                 {new Date(buyer.updatedAt).toLocaleString()}
