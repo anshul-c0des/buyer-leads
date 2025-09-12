@@ -60,12 +60,13 @@ enum PropertyType {
 }
 
 enum BHK {
-  Studio
-  One
-  Two
-  Three
-  Four
+  Studio = "Studio",
+  One = "1",
+  Two = "2",
+  Three = "3",
+  Four = "4",
 }
+
 
 enum Purpose {
   Buy

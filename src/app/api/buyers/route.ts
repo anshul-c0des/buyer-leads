@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { buyerSchema } from '@/lib/zod/buyerSchema'
 import { ZodError } from 'zod'
+import { mapBhkToPrisma } from '@/lib/bhkMapping'
 
 const PAGE_SIZE = 10
 
@@ -70,7 +71,7 @@ export async function POST(req: Request) {
     const buyer = await prisma.buyer.create({
       data: {
         ...data,
-        bhk: data.bhk ?? null,
+        bhk: mapBhkToPrisma(data.bhk),
         tags: data.tags ?? [],
         ownerId: 'demo-user',
       },
