@@ -42,7 +42,7 @@ export async function POST(req: Request) {
     },
     create: {
       supabaseId: user.id,
-      email,
+      email: user.email!,
       phone: phone ?? '',
       name: user_metadata?.name || 'No Name',
     },
