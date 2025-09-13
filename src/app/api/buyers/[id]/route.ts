@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { buyerSchema } from '@/lib/zod/buyerSchema'
 import { mapBhkToPrisma, mapTimelineToPrisma, mapSourceToPrisma } from '@/lib/bhkMapping'
+import { getAuthenticatedUser } from '@/lib/auth'
 
 export async function GET(
   req: NextRequest,
@@ -22,10 +23,15 @@ export async function GET(
     return NextResponse.json({ success: false, message: 'Server error' }, { status: 500 })
   }
 }
-
+ 
 
 export async function PUT(req: Request, { params }: { params: { id: string } }) {
   try {
+    const user = await getAuthenticatedUser(req)
+    if (!user) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    }
+
     const id = params.id
     const body = await req.json()
     const data = buyerSchema.parse(body)
@@ -33,6 +39,11 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const existing = await prisma.buyer.findUnique({ where: { id } })
     if (!existing) {
       return NextResponse.json({ success: false, message: 'Buyer not found' }, { status: 404 })
+    }
+
+    // Authorization: allow only owner or admin
+    if (existing.ownerId !== user.id && user.role !== 'ADMIN') {
+      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
     }
 
     if (body.updatedAt && new Date(body.updatedAt).toISOString() !== existing.updatedAt.toISOString()) {
@@ -55,7 +66,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     await prisma.buyerHistory.create({
       data: {
         buyerId: id,
-        changedBy: 'demo-user',
+        changedBy: user.email || 'unknown',
         diff: {
           before: existing,
           after: updated,
@@ -76,11 +87,24 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
 
 export async function DELETE(req: Request, { params }: { params: { id: string } }) {
   try {
+    const user = await getAuthenticatedUser(req)
+    if (!user) {
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    }
+
     const id = params.id
 
-    const buyer = await prisma.buyer.delete({
-      where: { id },
-    })
+    const existing = await prisma.buyer.findUnique({ where: { id } })
+    if (!existing) {
+      return NextResponse.json({ success: false, message: 'Buyer not found' }, { status: 404 })
+    }
+
+    // Authorization: allow only owner or admin
+    if (existing.ownerId !== user.id && user.role !== 'ADMIN') {
+      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
+    }
+
+    await prisma.buyer.delete({ where: { id } })
 
     return NextResponse.json({ success: true })
   } catch (error: any) {

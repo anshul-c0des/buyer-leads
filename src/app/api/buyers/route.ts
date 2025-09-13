@@ -3,66 +3,91 @@ import { prisma } from '@/lib/prisma'
 import { buyerSchema } from '@/lib/zod/buyerSchema'
 import { ZodError } from 'zod'
 import { mapBhkToPrisma, mapSourceToPrisma, mapTimelineToPrisma } from '@/lib/bhkMapping'
-import { supabase } from '@/lib/supabaseClient'
 import { createClient } from '@supabase/supabase-js'
 
 const PAGE_SIZE = 10
 
-export async function GET(req: Request) { 
-  try {
-    const url = new URL(req.url)
-    const page = parseInt(url.searchParams.get('page') ?? '1')
-    const city = url.searchParams.get('city') ?? undefined
-    const propertyType = url.searchParams.get('propertyType') ?? undefined
-    const status = url.searchParams.get('status') ?? undefined
-    const timeline = url.searchParams.get('timeline') ?? undefined
-    const search = url.searchParams.get('search') ?? undefined
-
-    const filters: any = {}
-
-    if (city) filters.city = city
-    if (propertyType) filters.propertyType = propertyType
-    if (status) filters.status = status
-    if (timeline) filters.timeline = timeline
-
-    // Search filter (fullName, phone, email)
-    const searchFilter = search
-      ? {
-          OR: [
-            { fullName: { contains: search, mode: 'insensitive' } },
-            { phone: { contains: search } },
-            { email: { contains: search, mode: 'insensitive' } },
-          ],
-        }
-      : {}
-
-    const where = { ...filters, ...searchFilter }
-
-    const [total, buyers] = await Promise.all([
-      prisma.buyer.count({ where }),
-      prisma.buyer.findMany({
-        where,
-        orderBy: { updatedAt: 'desc' },
-        skip: (page - 1) * PAGE_SIZE,
-        take: PAGE_SIZE,
-      }),
-    ])
-
-    return NextResponse.json({
-      buyers,
-      total,
-      page,
-      pageSize: PAGE_SIZE,
-      totalPages: Math.ceil(total / PAGE_SIZE),
-    })
-  } catch (error: any) {
-    console.error(error)
-    return NextResponse.json(
-      { success: false, message: error.message || 'Server Error' },
-      { status: 500 }
-    )
+export async function GET(req: Request) {
+  const authHeader = req.headers.get('authorization')
+  const token = authHeader?.split(' ')[1]
+  if (!token) {
+    return NextResponse.json({ success: false, message: 'Missing auth token' }, { status: 401 })
   }
+
+  const supabase = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    {
+      global: {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        }
+      }
+    }
+  )
+
+  const { data: { user: supaUser }, error } = await supabase.auth.getUser()
+  if (error || !supaUser) {
+    return NextResponse.json({ success: false, message: 'Not authenticated' }, { status: 401 })
+  }
+
+  const dbUser = await prisma.user.findUnique({
+    where: { supabaseId: supaUser.id }
+  })
+  if (!dbUser) {
+    return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 })
+  }
+
+  const url = new URL(req.url)
+  const page = parseInt(url.searchParams.get('page') ?? '1')
+  const city = url.searchParams.get('city')
+  const propertyType = url.searchParams.get('propertyType')
+  const status = url.searchParams.get('status')
+  const timeline = url.searchParams.get('timeline')
+  const search = url.searchParams.get('search')
+
+  const filters: any = {}
+  if (city) filters.city = city
+  if (propertyType) filters.propertyType = propertyType
+  if (status) filters.status = status
+  if (timeline) filters.timeline = timeline
+
+  const searchFilter = search ? {
+    OR: [
+      { fullName: { contains: search, mode: 'insensitive' } },
+      { phone: { contains: search } },
+      { email: { contains: search, mode: 'insensitive' } },
+    ],
+  } : {}
+
+  // if user is not ADMIN, restrict to ownerId
+  if (dbUser.role !== 'ADMIN') {
+    filters.ownerId = dbUser.id
+  }
+
+  const where = { ...filters, ...searchFilter }
+
+  const PAGE_SIZE = 10
+
+  const [total, buyers] = await Promise.all([
+    prisma.buyer.count({ where }),
+    prisma.buyer.findMany({
+      where,
+      orderBy: { updatedAt: 'desc' },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    })
+  ])
+
+  return NextResponse.json({
+    buyers,
+    total,
+    page,
+    pageSize: PAGE_SIZE,
+    totalPages: Math.ceil(total / PAGE_SIZE),
+  })
 }
+
 
 export async function POST(req: Request) {
   try {
@@ -77,7 +102,7 @@ export async function POST(req: Request) {
 
     const supabase = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
       {
         global: {
           headers: {

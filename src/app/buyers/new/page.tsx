@@ -4,7 +4,8 @@ import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { buyerSchema } from "@/lib/zod/buyerSchema"
 import { z } from "zod"
-import { useState } from "react"
+import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
@@ -21,6 +22,9 @@ import { supabase } from "@/lib/supabaseClient"
 type FormData = z.infer<typeof buyerSchema>
 
 export default function NewBuyerPage() {
+  const router = useRouter()
+  const [loading, setLoading] = useState(true)
+
   const {
     register,
     control,
@@ -31,19 +35,39 @@ export default function NewBuyerPage() {
     resolver: zodResolver(buyerSchema),
   })
 
+  useEffect(() => {
+    async function checkAuth() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+
+      if (!session) {
+        router.replace("/login")
+      } else {
+        setLoading(false)
+      }
+    }
+    checkAuth()
+  }, [router])
+
   const [submitting, setSubmitting] = useState(false)
   const propertyType = watch("propertyType")
 
   const onSubmit = async (data: FormData) => {
     setSubmitting(true)
 
-    const { data: { session } } = await supabase.auth.getSession();
-    const accessToken = session?.access_token;
+    const {
+      data: { session },
+    } = await supabase.auth.getSession()
+    const accessToken = session?.access_token
 
     try {
       const res = await fetch("/api/buyers", {
         method: "POST",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
         body: JSON.stringify(data),
       })
 
@@ -61,6 +85,8 @@ export default function NewBuyerPage() {
       setSubmitting(false)
     }
   }
+
+  if (loading) return <p>Loading...</p>
 
   return (
     <div className="max-w-2xl mx-auto p-6">

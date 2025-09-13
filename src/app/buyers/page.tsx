@@ -12,6 +12,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Button } from '@/components/ui/button'
+import { supabase } from '@/lib/supabaseClient'
 
 type Filters = {
   city?: string
@@ -49,6 +50,39 @@ export default function BuyersPage() {
   } | null>(null)
 
   const [isPending, startTransition] = useTransition()
+  const [currentUser, setCurrentUser] = useState<{ id: string, role: string } | null>(null)
+
+  useEffect(() => {
+    async function fetchCurrentUser() {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) return;
+  
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+  
+      if (!token) {
+        console.error('No token found for current user');
+        return;
+      }
+  
+      const res = await fetch('/api/auth/me', {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+  
+      if (!res.ok) {
+        console.error('Failed to fetch user data:', res.status);
+        return;
+      }
+  
+      const dbUser = await res.json();
+      setCurrentUser({ id: dbUser.id, role: dbUser.role });
+    }
+  
+    fetchCurrentUser();
+  }, []);
+  
 
   // Fetch buyers data whenever filters or debounced search changes
   useEffect(() => {
@@ -61,7 +95,19 @@ export default function BuyersPage() {
       if (debouncedSearch) params.append('search', debouncedSearch)
       params.append('page', String(filters.page ?? 1))
 
-      const res = await fetch(`/api/buyers?${params.toString()}`)
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
+      if (!token) {
+        console.error('No valid token found, cannot fetch buyers');
+        return;
+      }
+
+      const res = await fetch(`/api/buyers?${params.toString()}`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
       const data = await res.json()
       setBuyersData(data)
     }
@@ -109,7 +155,7 @@ export default function BuyersPage() {
 
   return (
     <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Buyer Leads</h1>
+      <h1 className="text-2xl font-bold mb-6">Buyer Base</h1>
 
       {/* Filters */}
       <div className="flex flex-wrap gap-4 mb-6">
@@ -206,7 +252,7 @@ export default function BuyersPage() {
           </tr>
         </thead>
         <tbody>
-          {buyersData?.buyers.length === 0 && (
+        {Array.isArray(buyersData?.buyers) && buyersData.buyers.length === 0 && (
             <tr>
               <td colSpan={8} className="text-center p-4">
                 No buyers found.
@@ -214,7 +260,7 @@ export default function BuyersPage() {
             </tr>
           )}
 
-          {buyersData?.buyers.map((buyer) => (
+          {Array.isArray(buyersData?.buyers) && buyersData?.buyers.map((buyer) => (
             <tr key={buyer.id} className="hover:bg-gray-100 cursor-pointer">
               <td className="border border-gray-300 p-2">{buyer.fullName}</td>
               <td className="border border-gray-300 p-2">{buyer.phone}</td>
@@ -229,9 +275,11 @@ export default function BuyersPage() {
                 {new Date(buyer.updatedAt).toLocaleString()}
               </td>
               <td className="border border-gray-300 p-2">
-                <Button size="sm" onClick={() => router.push(`/buyers/${buyer.id}`)}>
-                  Edit
-                </Button>
+                {(currentUser?.role === 'ADMIN' || currentUser?.id === buyer.ownerId) && (
+                  <Button size="sm" onClick={() => router.push(`/buyers/${buyer.id}`)}>
+                    Edit
+                  </Button>
+                )}
                 <Button size="sm" onClick={() => router.push(`/buyers/${buyer.id}/view`)}>
                   View
                 </Button>
