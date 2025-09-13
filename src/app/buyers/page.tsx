@@ -232,7 +232,11 @@ export default function BuyersPage() {
                 <Button size="sm" onClick={() => router.push(`/buyers/${buyer.id}`)}>
                   Edit
                 </Button>
-              </td>
+                <Button size="sm" onClick={() => router.push(`/buyers/${buyer.id}/view`)}>
+                  View
+                </Button>
+                  </td>
+
             </tr>
           ))}
         </tbody>
