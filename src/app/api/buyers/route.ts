@@ -3,10 +3,11 @@ import { prisma } from '@/lib/prisma'
 import { buyerSchema } from '@/lib/zod/buyerSchema'
 import { ZodError } from 'zod'
 import { mapBhkToPrisma, mapSourceToPrisma, mapTimelineToPrisma } from '@/lib/bhkMapping'
+import { supabase } from '@/lib/supabaseClient'
 
 const PAGE_SIZE = 10
 
-export async function GET(req: Request) {
+export async function GET(req: Request) { 
   try {
     const url = new URL(req.url)
     const page = parseInt(url.searchParams.get('page') ?? '1')
@@ -63,10 +64,24 @@ export async function GET(req: Request) {
 }
 
 
+
 export async function POST(req: Request) {
   try {
-    const body = await req.json()
+    const { data: { user: supabaseUser } } = await supabase.auth.getUser()
+    if (!supabaseUser) {
+      return NextResponse.json({ success: false, message: 'Not authenticated' }, { status: 401 })
+    }
 
+    const dbUser = await prisma.user.findUnique({
+      where: {supabaseId: supabaseUser.id},
+    })
+    if (!dbUser) {
+      return NextResponse.json(
+        { success: false, message: 'User not found in DB' }, { status: 404 }
+      )
+    }
+
+    const body = await req.json()
     const data = buyerSchema.parse(body)
 
     const buyerData = {
@@ -75,8 +90,9 @@ export async function POST(req: Request) {
       timeline: mapTimelineToPrisma(data.timeline),
       source: mapSourceToPrisma(data.source),
       tags: data.tags ?? [],
-      ownerId: 'demo-user',
+      ownerId: dbUser.id,
     }
+    
 
     const buyer = await prisma.buyer.create({
       data: buyerData,
