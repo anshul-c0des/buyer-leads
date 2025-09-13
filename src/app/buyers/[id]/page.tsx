@@ -32,7 +32,7 @@ export default function BuyerEditPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
+  const [deleting, setDeleting] = useState(false)
   const [formData, setFormData] = useState<Partial<Buyer>>({})
 
   // Fetch buyer on mount
@@ -90,6 +90,30 @@ export default function BuyerEditPage() {
       setError(err.message)
     } finally {
       setSaving(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!confirm("Are you sure you want to delete this buyer? This action cannot be undone.")) {
+      return
+    }
+  
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/buyers/${id}`, {
+        method: "DELETE",
+      })
+      const data = await res.json()
+  
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || "Delete failed")
+      }
+  
+      router.push("/buyers")
+    } catch (err: any) {
+      alert(err.message)
+    } finally {
+      setDeleting(false)
     }
   }
 
@@ -227,6 +251,15 @@ export default function BuyerEditPage() {
         <Button type="submit" disabled={saving}>
           {saving ? "Saving..." : "Save"}
         </Button>
+        <Button
+          variant="destructive"
+          type="button"
+          onClick={handleDelete}
+          disabled={deleting}
+        >
+          {deleting ? 'Deleting...' : 'Delete Buyer'}
+        </Button>
+
 
         {error && <p className="text-red-600 mt-2">{error}</p>}
       </form>

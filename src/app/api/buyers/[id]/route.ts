@@ -72,3 +72,22 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     )
   }
 }
+
+
+export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+  try {
+    const id = params.id
+
+    const buyer = await prisma.buyer.delete({
+      where: { id },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error: any) {
+    console.error(error)
+    return NextResponse.json(
+      { success: false, message: error?.message || "Server Error" },
+      { status: 500 }
+    )
+  }
+}
