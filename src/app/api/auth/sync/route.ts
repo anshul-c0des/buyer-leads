@@ -18,7 +18,7 @@ export async function POST(req: Request) {
         headers: {
           Authorization: `Bearer ${token}`,
         },
-      },
+      }
     }
   )
 
@@ -31,20 +31,22 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid user or token" }, { status: 401 })
   }
 
-  const { email, phone, user_metadata } = user
+  const { email, user_metadata } = user
+  const name = user_metadata?.name || 'No Name'
+  const phone = user_metadata?.phone || ''
 
   const dbUser = await prisma.user.upsert({
     where: { supabaseId: user.id },
     update: {
       email,
-      phone: phone ?? '',
-      name: user_metadata?.name || 'No Name',
+      phone,
+      name,
     },
     create: {
       supabaseId: user.id,
-      email: user.email!,
-      phone: phone ?? '',
-      name: user_metadata?.name || 'No Name',
+      email: email!,
+      phone,
+      name,
     },
   })
 

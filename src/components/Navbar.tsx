@@ -18,21 +18,28 @@ export default function Navbar() {
 
   useEffect(() => {
     async function fetchUser() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user?.email) {
-        setUser({ email: user.email, initial: user.email.charAt(0).toUpperCase() })
-      } else {
-        setUser(null)
-      }
-    }
-    fetchUser()
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user?.email) {
-        setUser({ email: session.user.email, initial: session.user.email.charAt(0).toUpperCase() })
-      } else {
-        setUser(null)
-      }
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+    
+      if (!token) return setUser(null)
+    
+      const res = await fetch("/api/auth/me", {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+    
+      if (!res.ok) return setUser(null)
+    
+      const data = await res.json()
+      const name = data.name || data.email || "?"
+    
+      setUser({
+        email: data.email,
+        initial: name.charAt(0).toUpperCase(),
+      })
+    } 
+    
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      fetchUser()
     })
 
     return () => {
@@ -52,7 +59,13 @@ export default function Navbar() {
         <h1 className="text-xl font-bold cursor-pointer">Buyer Base</h1>
       </Link>
 
-      <div>
+      <div className="flex items-center gap-4">
+        {user && (
+          <Button variant="secondary" onClick={() => router.push("/buyers/new")}>
+            Add Buyer
+          </Button>
+        )}
+
         {user ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

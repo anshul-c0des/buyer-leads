@@ -58,16 +58,16 @@ export default function BuyersPage() {
       if (error || !user) return;
   
       const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+      const accessToken = session?.access_token;
   
-      if (!token) {
+      if (!accessToken) {
         console.error('No token found for current user');
         return;
       }
   
       const res = await fetch('/api/auth/me', {
         headers: {
-          Authorization: `Bearer ${token}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
   
@@ -76,8 +76,9 @@ export default function BuyersPage() {
         return;
       }
   
-      const dbUser = await res.json();
-      setCurrentUser({ id: dbUser.id, role: dbUser.role });
+      const data = await res.json()
+      setBuyersData(data)
+      setCurrentUser(data.user) 
     }
   
     fetchCurrentUser();

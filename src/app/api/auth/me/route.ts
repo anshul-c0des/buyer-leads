@@ -36,6 +36,6 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
 
-  const { id, role, email } = dbUser
-  return NextResponse.json({ id, role, email })
+  const { id, role, email, name } = dbUser
+  return NextResponse.json({ id, role, email, name })
 }

@@ -10,7 +10,6 @@ const PAGE_SIZE = 10
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')
   const token = authHeader?.split(' ')[1]
-
   let dbUser = null
 
   if (token) {
@@ -60,17 +59,6 @@ export async function GET(req: Request) {
       }
     : {}
 
-  // if user is not admin or unauthenticated, show only their own leads
-  if (dbUser?.role !== 'ADMIN') {
-    if (dbUser) {
-      filters.ownerId = dbUser.id
-    } else {
-      // not logged in at all — return public buyers or all, depending on your business logic
-      // You can decide to show only a subset, or skip filtering
-      // Example: filters.status = 'New' or filters.city = 'Public'
-    }
-  }
-
   const where = { ...filters, ...searchFilter }
   const PAGE_SIZE = 10
 
@@ -90,9 +78,9 @@ export async function GET(req: Request) {
     page,
     pageSize: PAGE_SIZE,
     totalPages: Math.ceil(total / PAGE_SIZE),
+    user: dbUser ? { id: dbUser.id, role: dbUser.role, email: dbUser.email } : null,
   })
 }
-
 
 
 export async function POST(req: Request) {
