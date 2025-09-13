@@ -4,6 +4,7 @@ import { buyerSchema } from '@/lib/zod/buyerSchema'
 import { ZodError } from 'zod'
 import { mapBhkToPrisma, mapSourceToPrisma, mapTimelineToPrisma } from '@/lib/bhkMapping'
 import { supabase } from '@/lib/supabaseClient'
+import { createClient } from '@supabase/supabase-js'
 
 const PAGE_SIZE = 10
 
@@ -63,27 +64,55 @@ export async function GET(req: Request) {
   }
 }
 
-
-
 export async function POST(req: Request) {
   try {
-    const { data: { user: supabaseUser } } = await supabase.auth.getUser()
-    if (!supabaseUser) {
+    const authHeader = req.headers.get('authorization')
+    const token = authHeader?.split(' ')[1]
+    console.log("authHeader: ",authHeader);
+    
+
+    if (!token) {
+      return NextResponse.json({ success: false, message: 'Missing auth token' }, { status: 401 })
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      }
+    )
+
+    const {
+      data: { user: supabaseUser },
+      error: userError,
+    } = await supabase.auth.getUser()
+
+    if (userError || !supabaseUser) {
       return NextResponse.json({ success: false, message: 'Not authenticated' }, { status: 401 })
     }
 
+    // Find your user in your DB
     const dbUser = await prisma.user.findUnique({
-      where: {supabaseId: supabaseUser.id},
+      where: { supabaseId: supabaseUser.id },
     })
+
     if (!dbUser) {
       return NextResponse.json(
-        { success: false, message: 'User not found in DB' }, { status: 404 }
+        { success: false, message: 'User not found in DB' },
+        { status: 404 }
       )
     }
 
+    // Validate body
     const body = await req.json()
     const data = buyerSchema.parse(body)
 
+    // Build buyer data
     const buyerData = {
       ...data,
       bhk: mapBhkToPrisma(data.bhk),
@@ -92,16 +121,15 @@ export async function POST(req: Request) {
       tags: data.tags ?? [],
       ownerId: dbUser.id,
     }
-    
 
     const buyer = await prisma.buyer.create({
       data: buyerData,
-    }) 
+    })
 
     await prisma.buyerHistory.create({
       data: {
         buyerId: buyer.id,
-        changedBy: 'demo-user',
+        changedBy: supabaseUser.email || 'unknown',
         diff: { created: data },
       },
     })
@@ -130,3 +158,4 @@ export async function POST(req: Request) {
     )
   }
 }
+

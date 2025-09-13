@@ -14,45 +14,54 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   async function handleLogin() {
-    setLoading(true);
-    setError(null);
-  
+    setLoading(true)
+    setError(null)
+
+    if (!email || !password) {
+      setError("Email and password are required")
+      setLoading(false)
+      return
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
-    });
-  
+    })
+
     if (error) {
-      setError(error.message);
-      setLoading(false);
-      return;
+      setError(error.message)
+      setLoading(false)
+      return
     }
 
-    if (data.user) {
-      try {
-        const res = await fetch("/api/auth/sync", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ user: data.user }),
-        });
-  
-        if (!res.ok) {
-          const errorData = await res.json();
-          setError(errorData.error || "Failed to sync user");
-          setLoading(false);
-          return;
-        }
-  
-        router.push("/buyers");
-      } catch (syncError) {
-        setError("Failed to sync user");
-        setLoading(false);
+    if (!data.session) {
+      setError("Login succeeded but no active session found")
+      setLoading(false)
+      return
+    }
+
+    try {
+      const res = await fetch("/api/auth/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ user: data.user }),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        setError(errorData.error || "Failed to sync user")
+        setLoading(false)
+        return
       }
+
+      router.push("/buyers")
+    } catch {
+      setError("Failed to sync user")
+      setLoading(false)
     }
   }
-  
 
   return (
     <div className="max-w-md mx-auto p-6">

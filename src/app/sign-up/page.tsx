@@ -16,15 +16,15 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false)
 
   async function handleSignup() {
-    setLoading(true);
-    setError(null);
-  
+    setLoading(true)
+    setError(null)
+
     if (!name || !email || !phone || !password) {
-      setError("All fields are required");
-      setLoading(false);
-      return;
+      setError("All fields are required")
+      setLoading(false)
+      return
     }
-  
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -34,39 +34,49 @@ export default function SignupPage() {
           phone,
         },
       },
-    });
-  
+    })
+
     if (error) {
-      setError(error.message);
-      setLoading(false);
-      return;
+      setError(error.message)
+      setLoading(false)
+      return
     }
-  
-    if (data.user) {
-      try {
-        const res = await fetch("/api/auth/sync", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ user: data.user }),
-        });
-  
-        if (!res.ok) {
-          const errorData = await res.json();
-          setError(errorData.error || "Failed to sync user");
-          setLoading(false);
-          return;
-        }
-  
-        router.push("/buyers");
-      } catch (syncError) {
-        setError("Failed to sync user");
-        setLoading(false);
+
+    if (!data.session) {
+      setError("Signup successful, but no active session. Please check your email to confirm.")
+      setLoading(false)
+      return
+    }
+
+    try {
+      const session = await supabase.auth.getSession()
+      const accessToken = session?.data.session?.access_token
+
+      console.log(accessToken);
+      
+
+      const res = await fetch("/api/auth/sync", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify({user: data.user}),
+      })
+
+      if (!res.ok) {
+        const errorData = await res.json()
+        setError(errorData.error || "Failed to sync user")
+        setLoading(false)
+        return
       }
+
+      router.push("/buyers")
+    } catch (syncError) {
+      setError("Failed to sync user")
+      setLoading(false)
     }
   }
-  
 
   return (
     <div className="max-w-md mx-auto p-6">

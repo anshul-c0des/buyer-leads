@@ -16,6 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { supabase } from "@/lib/supabaseClient"
 
 type FormData = z.infer<typeof buyerSchema>
 
@@ -36,10 +37,13 @@ export default function NewBuyerPage() {
   const onSubmit = async (data: FormData) => {
     setSubmitting(true)
 
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
+
     try {
       const res = await fetch("/api/buyers", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
         body: JSON.stringify(data),
       })
 
