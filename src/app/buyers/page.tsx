@@ -1,18 +1,18 @@
 "use client"
 
-import { useState, useEffect, useTransition } from 'react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useDebounce } from 'use-debounce'
-import { Input } from '@/components/ui/input'
+import { useState, useEffect, useTransition } from "react"
+import { useRouter, useSearchParams } from "next/navigation"
+import { useDebounce } from "use-debounce"
+import { Input } from "@/components/ui/input"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select'
-import { Button } from '@/components/ui/button'
-import { supabase } from '@/lib/supabaseClient'
+} from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
+import { supabase } from "@/lib/supabaseClient"
 
 type Filters = {
   city?: string
@@ -31,12 +31,12 @@ export default function BuyersPage() {
 
   // Extract query params for filters
   const [filters, setFilters] = useState<Filters>({
-    city: searchParams.get('city') ?? '',
-    propertyType: searchParams.get('propertyType') ?? '',
-    status: searchParams.get('status') ?? '',
-    timeline: searchParams.get('timeline') ?? '',
-    search: searchParams.get('search') ?? '',
-    page: Number(searchParams.get('page') ?? '1'),
+    city: searchParams.get("city") ?? "",
+    propertyType: searchParams.get("propertyType") ?? "",
+    status: searchParams.get("status") ?? "",
+    timeline: searchParams.get("timeline") ?? "",
+    search: searchParams.get("search") ?? "",
+    page: Number(searchParams.get("page") ?? "1"),
   })
 
   // Debounce search to reduce API calls
@@ -49,19 +49,25 @@ export default function BuyersPage() {
     totalPages: number
   } | null>(null)
 
+  const [loading, setLoading] = useState<boolean>(false)
+
   const [isPending, startTransition] = useTransition()
-  const [currentUser, setCurrentUser] = useState<{ id: string, role: string } | null>(null)
+  const [currentUser, setCurrentUser] = useState<{ id: string; role: string } | null>(null)
 
   useEffect(() => {
     async function fetchCurrentUser() {
       const { data: { user }, error } = await supabase.auth.getUser();
-      if (error || !user) return;
+      if (error || !user) {
+        setCurrentUser(null);
+        return;
+      }
   
       const { data: { session } } = await supabase.auth.getSession();
       const accessToken = session?.access_token;
   
       if (!accessToken) {
         console.error('No token found for current user');
+        setCurrentUser(null);
         return;
       }
   
@@ -73,12 +79,17 @@ export default function BuyersPage() {
   
       if (!res.ok) {
         console.error('Failed to fetch user data:', res.status);
+        setCurrentUser(null);
         return;
       }
   
-      const data = await res.json()
-      setBuyersData(data)
-      setCurrentUser(data.user) 
+      const data = await res.json();
+
+      if (data?.id) {
+        setCurrentUser(data);
+      } else {
+        setCurrentUser(null);
+      }
     }
   
     fetchCurrentUser();
@@ -88,28 +99,44 @@ export default function BuyersPage() {
   // Fetch buyers data whenever filters or debounced search changes
   useEffect(() => {
     async function fetchBuyers() {
-      const params = new URLSearchParams()
-      if (filters.city) params.append('city', filters.city)
-      if (filters.propertyType) params.append('propertyType', filters.propertyType)
-      if (filters.status) params.append('status', filters.status)
-      if (filters.timeline) params.append('timeline', filters.timeline)
-      if (debouncedSearch) params.append('search', debouncedSearch)
-      params.append('page', String(filters.page ?? 1))
+      setLoading(true)
+      try {
+        const params = new URLSearchParams()
+        if (filters.city) params.append("city", filters.city)
+        if (filters.propertyType) params.append("propertyType", filters.propertyType)
+        if (filters.status) params.append("status", filters.status)
+        if (filters.timeline) params.append("timeline", filters.timeline)
+        if (debouncedSearch) params.append("search", debouncedSearch)
+        params.append("page", String(filters.page ?? 1))
 
-      const { data: { session } } = await supabase.auth.getSession();
-      const token = session?.access_token;
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
+        const token = session?.access_token
 
-      const headers: HeadersInit = {}
-      if (token) {
-        headers.Authorization = `Bearer ${token}`
+        const headers: HeadersInit = {}
+        if (token) {
+          headers.Authorization = `Bearer ${token}`
+        }
+
+        const res = await fetch(`/api/buyers?${params.toString()}`, {
+          headers,
+        })
+
+        if (!res.ok) {
+          console.error("Failed to fetch buyers:", res.status, await res.text())
+          setBuyersData(null)
+          return
+        }
+
+        const data = await res.json()
+        setBuyersData(data)
+      } catch (error) {
+        console.error("Error fetching buyers:", error)
+        setBuyersData(null)
+      } finally {
+        setLoading(false)
       }
-
-      const res = await fetch(`/api/buyers?${params.toString()}`, {
-        headers,
-      })
-
-      const data = await res.json()
-      setBuyersData(data)
     }
     fetchBuyers()
   }, [filters.city, filters.propertyType, filters.status, filters.timeline, debouncedSearch, filters.page])
@@ -119,21 +146,21 @@ export default function BuyersPage() {
     const newFilters = { ...filters, ...updated, page: 1 } // reset page to 1 on filter change
 
     // Convert 'all' to empty string to disable filter
-    for (const key of ['city', 'propertyType', 'status', 'timeline'] as const) {
-      if (newFilters[key] === 'all') {
-        newFilters[key] = ''
+    for (const key of ["city", "propertyType", "status", "timeline"] as const) {
+      if (newFilters[key] === "all") {
+        newFilters[key] = ""
       }
     }
 
     setFilters(newFilters)
 
     const params = new URLSearchParams()
-    if (newFilters.city) params.append('city', newFilters.city)
-    if (newFilters.propertyType) params.append('propertyType', newFilters.propertyType)
-    if (newFilters.status) params.append('status', newFilters.status)
-    if (newFilters.timeline) params.append('timeline', newFilters.timeline)
-    if (newFilters.search) params.append('search', newFilters.search)
-    params.append('page', String(newFilters.page ?? 1))
+    if (newFilters.city) params.append("city", newFilters.city)
+    if (newFilters.propertyType) params.append("propertyType", newFilters.propertyType)
+    if (newFilters.status) params.append("status", newFilters.status)
+    if (newFilters.timeline) params.append("timeline", newFilters.timeline)
+    if (newFilters.search) params.append("search", newFilters.search)
+    params.append("page", String(newFilters.page ?? 1))
 
     startTransition(() => {
       router.replace(`/buyers?${params.toString()}`)
@@ -147,11 +174,11 @@ export default function BuyersPage() {
   }
 
   const timelineLabels: Record<string, string> = {
-    ZeroToThreeMonths: '0-3 months',
-    ThreeToSixMonths: '3-6 months',
-    MoreThanSixMonths: '>6 months',
-    Exploring: 'Exploring',
-  }  
+    ZeroToThreeMonths: "0-3 months",
+    ThreeToSixMonths: "3-6 months",
+    MoreThanSixMonths: ">6 months",
+    Exploring: "Exploring",
+  }
 
   return (
     <div className="max-w-6xl mx-auto p-6">
@@ -166,10 +193,7 @@ export default function BuyersPage() {
           className="min-w-[200px]"
         />
 
-        <Select
-          value={filters.city}
-          onValueChange={(val) => updateFilters({ city: val })}
-        >
+        <Select value={filters.city} onValueChange={(val) => updateFilters({ city: val })}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="City" />
           </SelectTrigger>
@@ -183,10 +207,7 @@ export default function BuyersPage() {
           </SelectContent>
         </Select>
 
-        <Select
-          value={filters.propertyType}
-          onValueChange={(val) => updateFilters({ propertyType: val })}
-        >
+        <Select value={filters.propertyType} onValueChange={(val) => updateFilters({ propertyType: val })}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="Property Type" />
           </SelectTrigger>
@@ -200,10 +221,7 @@ export default function BuyersPage() {
           </SelectContent>
         </Select>
 
-        <Select
-          value={filters.status}
-          onValueChange={(val) => updateFilters({ status: val })}
-        >
+        <Select value={filters.status} onValueChange={(val) => updateFilters({ status: val })}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -219,10 +237,7 @@ export default function BuyersPage() {
           </SelectContent>
         </Select>
 
-        <Select
-          value={filters.timeline}
-          onValueChange={(val) => updateFilters({ timeline: val })}
-        >
+        <Select value={filters.timeline} onValueChange={(val) => updateFilters({ timeline: val })}>
           <SelectTrigger className="w-[150px]">
             <SelectValue placeholder="Timeline" />
           </SelectTrigger>
@@ -234,6 +249,13 @@ export default function BuyersPage() {
             <SelectItem value="Exploring">Exploring</SelectItem>
           </SelectContent>
         </Select>
+
+        <Button onClick={() => router.push("/buyers/import")}>
+          Import CSV
+        </Button>
+        <Button onClick={() => router.push(`/buyers/export${window.location.search}`)}>
+          Export CSV
+        </Button>
       </div>
 
       {/* Table */}
@@ -252,50 +274,50 @@ export default function BuyersPage() {
           </tr>
         </thead>
         <tbody>
-        {Array.isArray(buyersData?.buyers) && buyersData.buyers.length === 0 && (
+          {loading ? (
             <tr>
-              <td colSpan={8} className="text-center p-4">
+              <td colSpan={9} className="text-center p-4">
+                Loading buyers...
+              </td>
+            </tr>
+          ) : Array.isArray(buyersData?.buyers) && buyersData.buyers.length === 0 ? (
+            <tr>
+              <td colSpan={9} className="text-center p-4">
                 No buyers found.
               </td>
             </tr>
-          )}
-
-          {Array.isArray(buyersData?.buyers) && buyersData?.buyers.map((buyer) => (
-            <tr key={buyer.id} className="hover:bg-gray-100 cursor-pointer">
-              <td className="border border-gray-300 p-2">{buyer.fullName}</td>
-              <td className="border border-gray-300 p-2">{buyer.phone}</td>
-              <td className="border border-gray-300 p-2">{buyer.city}</td>
-              <td className="border border-gray-300 p-2">{buyer.propertyType}</td>
-              <td className="border border-gray-300 p-2">
-                {buyer.budgetMin ?? '-'} - {buyer.budgetMax ?? '-'}
-              </td>
-              <td className="border border-gray-300 p-2">{timelineLabels[buyer.timeline] ?? buyer.timeline}</td>
-              <td className="border border-gray-300 p-2">{buyer.status}</td>
-              <td className="border border-gray-300 p-2">
-                {new Date(buyer.updatedAt).toLocaleString()}
-              </td>
-              <td className="border border-gray-300 p-2">
-                {(currentUser?.role === 'ADMIN' || currentUser?.id === buyer.ownerId) && (
-                  <Button size="sm" onClick={() => router.push(`/buyers/${buyer.id}`)}>
-                    Edit
+          ) : (
+            buyersData?.buyers.map((buyer) => (
+              <tr key={buyer.id} className="hover:bg-gray-100 cursor-pointer">
+                <td className="border border-gray-300 p-2">{buyer.fullName}</td>
+                <td className="border border-gray-300 p-2">{buyer.phone}</td>
+                <td className="border border-gray-300 p-2">{buyer.city}</td>
+                <td className="border border-gray-300 p-2">{buyer.propertyType}</td>
+                <td className="border border-gray-300 p-2">
+                  {buyer.budgetMin ?? "-"} - {buyer.budgetMax ?? "-"}
+                </td>
+                <td className="border border-gray-300 p-2">{timelineLabels[buyer.timeline] ?? buyer.timeline}</td>
+                <td className="border border-gray-300 p-2">{buyer.status}</td>
+                <td className="border border-gray-300 p-2">{new Date(buyer.updatedAt).toLocaleString()}</td>
+                <td className="border border-gray-300 p-2 space-x-2">
+                  {(currentUser?.role === "ADMIN" || currentUser?.id === buyer.ownerId) && (
+                    <Button size="sm" onClick={() => router.push(`/buyers/${buyer.id}`)}>
+                      Edit
+                    </Button>
+                  )}
+                  <Button size="sm" onClick={() => router.push(`/buyers/${buyer.id}/view`)}>
+                    View
                   </Button>
-                )}
-                <Button size="sm" onClick={() => router.push(`/buyers/${buyer.id}/view`)}>
-                  View
-                </Button>
-                  </td>
-
-            </tr>
-          ))}
+                </td>
+              </tr>
+            ))
+          )}
         </tbody>
       </table>
 
       {/* Pagination */}
       <div className="flex justify-center items-center mt-4 gap-4">
-        <Button
-          onClick={() => goToPage((filters.page ?? 1) - 1)}
-          disabled={(filters.page ?? 1) <= 1 || isPending}
-        >
+        <Button onClick={() => goToPage((filters.page ?? 1) - 1)} disabled={(filters.page ?? 1) <= 1 || isPending || loading}>
           Previous
         </Button>
         <span>
@@ -303,9 +325,7 @@ export default function BuyersPage() {
         </span>
         <Button
           onClick={() => goToPage((filters.page ?? 1) + 1)}
-          disabled={
-            (filters.page ?? 1) >= (buyersData?.totalPages ?? 1) || isPending
-          }
+          disabled={(filters.page ?? 1) >= (buyersData?.totalPages ?? 1) || isPending || loading}
         >
           Next
         </Button>

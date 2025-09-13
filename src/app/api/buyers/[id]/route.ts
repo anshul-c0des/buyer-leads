@@ -59,7 +59,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         bhk: bhk ?? null,
         timeline: mapTimelineToPrisma(data.timeline),
         source: mapSourceToPrisma(data.source),
-        tags: data.tags ?? [],
+        tags: data.tags ? Array.isArray(data.tags) ? data.tags : [data.tags] : [],
       },
     })
 

@@ -77,6 +77,7 @@ export default function NewBuyerPage() {
         alert(result.message || "Error creating lead")
       } else {
         alert("Lead created successfully!")
+        router.push('/buyers')
       }
     } catch (err) {
       console.error("Fetch error:", err)
