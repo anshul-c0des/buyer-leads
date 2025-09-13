@@ -10,7 +10,7 @@ export async function GET(
 ) {
   try {
     const buyer = await prisma.buyer.findUnique({
-      where: { id: params.id },
+      where: { id: await params.id },
     })
 
     if (!buyer) {

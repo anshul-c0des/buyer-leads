@@ -41,10 +41,12 @@ export default function LoginPage() {
     }
 
     try {
+      const accessToken = data.session?.access_token;
       const res = await fetch("/api/auth/sync", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          "Authorization": `Bearer ${accessToken}`
         },
         body: JSON.stringify({ user: data.user }),
       })
@@ -94,6 +96,20 @@ export default function LoginPage() {
       <Button onClick={handleLogin} disabled={loading}>
         {loading ? "Logging in..." : "Login"}
       </Button>
+
+      <div className="mt-4 text-center">
+        <p className="text-sm">
+          Don’t have an account?{" "}
+          <Button
+            variant="link"
+            className="p-0 h-auto text-blue-600"
+            onClick={() => router.push("/sign-up")}
+          >
+            Sign up
+          </Button>
+        </p>
+      </div>
+
     </div>
   )
 }

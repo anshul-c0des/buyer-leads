@@ -52,9 +52,6 @@ export default function SignupPage() {
       const session = await supabase.auth.getSession()
       const accessToken = session?.data.session?.access_token
 
-      console.log(accessToken);
-      
-
       const res = await fetch("/api/auth/sync", {
         method: "POST",
         headers: {
@@ -131,6 +128,19 @@ export default function SignupPage() {
       <Button onClick={handleSignup} disabled={loading}>
         {loading ? "Signing up..." : "Sign Up"}
       </Button>
+
+      <div className="mt-4 text-center">
+        <p className="text-sm">
+          Already have an account?{" "}
+          <Button
+            variant="link"
+            className="p-0 h-auto text-blue-600"
+            onClick={() => router.push("/login")}
+          >
+            Login
+          </Button>
+        </p>
+      </div>
     </div>
   )
 }

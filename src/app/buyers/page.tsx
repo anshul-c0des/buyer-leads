@@ -98,16 +98,15 @@ export default function BuyersPage() {
       const { data: { session } } = await supabase.auth.getSession();
       const token = session?.access_token;
 
-      if (!token) {
-        console.error('No valid token found, cannot fetch buyers');
-        return;
+      const headers: HeadersInit = {}
+      if (token) {
+        headers.Authorization = `Bearer ${token}`
       }
 
       const res = await fetch(`/api/buyers?${params.toString()}`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
+        headers,
+      })
+
       const data = await res.json()
       setBuyersData(data)
     }

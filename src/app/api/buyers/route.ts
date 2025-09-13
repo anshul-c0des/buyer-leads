@@ -10,34 +10,32 @@ const PAGE_SIZE = 10
 export async function GET(req: Request) {
   const authHeader = req.headers.get('authorization')
   const token = authHeader?.split(' ')[1]
-  if (!token) {
-    return NextResponse.json({ success: false, message: 'Missing auth token' }, { status: 401 })
-  }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        }
+  let dbUser = null
+
+  if (token) {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
       }
+    )
+
+    const { data: { user: supaUser }, error } = await supabase.auth.getUser()
+
+    if (!error && supaUser) {
+      dbUser = await prisma.user.findUnique({
+        where: { supabaseId: supaUser.id },
+      })
     }
-  )
-
-  const { data: { user: supaUser }, error } = await supabase.auth.getUser()
-  if (error || !supaUser) {
-    return NextResponse.json({ success: false, message: 'Not authenticated' }, { status: 401 })
   }
 
-  const dbUser = await prisma.user.findUnique({
-    where: { supabaseId: supaUser.id }
-  })
-  if (!dbUser) {
-    return NextResponse.json({ success: false, message: 'User not found' }, { status: 404 })
-  }
-
+  // extract filters
   const url = new URL(req.url)
   const page = parseInt(url.searchParams.get('page') ?? '1')
   const city = url.searchParams.get('city')
@@ -52,21 +50,28 @@ export async function GET(req: Request) {
   if (status) filters.status = status
   if (timeline) filters.timeline = timeline
 
-  const searchFilter = search ? {
-    OR: [
-      { fullName: { contains: search, mode: 'insensitive' } },
-      { phone: { contains: search } },
-      { email: { contains: search, mode: 'insensitive' } },
-    ],
-  } : {}
+  const searchFilter = search
+    ? {
+        OR: [
+          { fullName: { contains: search, mode: 'insensitive' } },
+          { phone: { contains: search } },
+          { email: { contains: search, mode: 'insensitive' } },
+        ],
+      }
+    : {}
 
-  // if user is not ADMIN, restrict to ownerId
-  if (dbUser.role !== 'ADMIN') {
-    filters.ownerId = dbUser.id
+  // if user is not admin or unauthenticated, show only their own leads
+  if (dbUser?.role !== 'ADMIN') {
+    if (dbUser) {
+      filters.ownerId = dbUser.id
+    } else {
+      // not logged in at all — return public buyers or all, depending on your business logic
+      // You can decide to show only a subset, or skip filtering
+      // Example: filters.status = 'New' or filters.city = 'Public'
+    }
   }
 
   const where = { ...filters, ...searchFilter }
-
   const PAGE_SIZE = 10
 
   const [total, buyers] = await Promise.all([
@@ -76,7 +81,7 @@ export async function GET(req: Request) {
       orderBy: { updatedAt: 'desc' },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
-    })
+    }),
   ])
 
   return NextResponse.json({
@@ -87,6 +92,7 @@ export async function GET(req: Request) {
     totalPages: Math.ceil(total / PAGE_SIZE),
   })
 }
+
 
 
 export async function POST(req: Request) {

@@ -5,6 +5,7 @@ import { useRouter, useParams } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent,SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import { supabase } from "@/lib/supabaseClient"
 
 type Buyer = {
   id: string
@@ -65,9 +66,13 @@ export default function BuyerEditPage() {
     setError(null)
 
     try {
+      const { data: { session }} = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+
       // Sanitize formData for enums (convert "" to null)
       const payload = {
         ...formData,
+        email: formData.email === null ? "" : formData.email ?? "",
         bhk: formData.bhk || undefined,
         timeline: formData.timeline === "" ? null : formData.timeline,
         status: formData.status === "" ? null : formData.status,
@@ -76,7 +81,7 @@ export default function BuyerEditPage() {
 
       const res = await fetch(`/api/buyers/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
         body: JSON.stringify(payload),
       })
 
@@ -100,8 +105,11 @@ export default function BuyerEditPage() {
   
     setDeleting(true)
     try {
+      const { data: { session }} = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
       const res = await fetch(`/api/buyers/${id}`, {
         method: "DELETE",
+        headers: { Authorization: `Bearer ${accessToken}`}
       })
       const data = await res.json()
   
