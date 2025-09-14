@@ -1,92 +1,121 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { buyerSchema } from '@/lib/zod/buyerSchema'
+import { ZodError } from 'zod'
 import { mapBhkToPrisma, mapSourceToPrisma, mapTimelineToPrisma } from '@/lib/bhkMapping'
 import { createClient } from '@supabase/supabase-js'
-import z from 'zod'
-
 
 export async function POST(req: Request) {
-  const body = await req.json()
-
-  if (!Array.isArray(body)) {
-    return NextResponse.json({ error: 'Invalid payload' }, { status: 400 })
-  }
-
-  if (body.length > 200) {
-    return NextResponse.json({ error: 'Limit 200 rows max' }, { status: 400 })
-  }
-
-  const authHeader = req.headers.get("authorization")
-  const token = authHeader?.split(" ")[1]
-
-  if (!token) {
-    return NextResponse.json({ error: "Missing token" }, { status: 401 })
-  }
-
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-    {
-      global: {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      },
-    }
-  )
-
-  const { data: { user }, error } = await supabase.auth.getUser()
-
-  if (error || !user) {
-    return NextResponse.json({ error: "Invalid token or user not found" }, { status: 401 })
-  }
-
-  const dbUser = await prisma.user.findUnique({
-    where: { supabaseId: user.id },
-  })
-
-  if (!dbUser) {
-    return NextResponse.json({ error: "User not found in DB" }, { status: 404 })
-  }
-
-  const parsed: z.infer<typeof buyerSchema>[] = []
-
-  for (const row of body) {
-    const result = buyerSchema.safeParse(row)
-    if (!result.success) {
-      return NextResponse.json({ error: 'Validation failed', issues: result.error.format() }, { status: 400 })
-    }
-    parsed.push(result.data)
-  }
-
   try {
-    await prisma.$transaction(async (tx) => {
-      for (const buyer of parsed) {
-        const created = await tx.buyer.create({
-          data: {
-            ...buyer,
-            bhk: mapBhkToPrisma(buyer.bhk),
-            timeline: mapTimelineToPrisma(buyer.timeline),
-            source: mapSourceToPrisma(buyer.source),
-            tags: Array.isArray(buyer.tags) ? buyer.tags.map(t => t.trim()) : (buyer.tags?.split(',').map(t => t.trim()) ?? []),
-            ownerId: dbUser.id,
-          },
-        })
+    const authHeader = req.headers.get('authorization')
+    const token = authHeader?.split(' ')[1]
 
-        await tx.buyerHistory.create({
-          data: {
-            buyerId: created.id,    
-            diff: buyer,
-            changedBy: dbUser.id,
+    if (!token) {
+      return NextResponse.json({ success: false, message: 'Missing auth token' }, { status: 401 })
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+      {
+        global: {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-        })
+        },
       }
+    )
+
+    const {
+      data: { user: supabaseUser },
+      error: userError,
+    } = await supabase.auth.getUser(token)
+
+    if (userError || !supabaseUser) {
+      return NextResponse.json({ success: false, message: 'Not authenticated' }, { status: 401 })
+    }
+
+    const dbUser = await prisma.user.findUnique({
+      where: { supabaseId: supabaseUser.id },
     })
 
-    return NextResponse.json({ message: `${parsed.length} buyers imported.` })
-  } catch (err) {
-    console.error(err)
-    return NextResponse.json({ error: 'Database error', details: err }, { status: 500 })
+    if (!dbUser) {
+      return NextResponse.json({ success: false, message: 'User not found in DB' }, { status: 404 })
+    }
+
+    const body = await req.json()
+
+    if (!Array.isArray(body)) {
+      return NextResponse.json({ success: false, message: 'Expected an array of buyers' }, { status: 400 })
+    }
+
+    const validBuyers = []
+    const errors = []
+
+    for (let i = 0; i < body.length; i++) {
+      const row = body[i]
+      const result = buyerSchema.safeParse(row)
+      if (!result.success) {
+        errors.push({
+          row: i + 1,
+          errors: result.error.errors.map(e => `${e.path.join('.')}: ${e.message}`),
+        })
+      } else {
+        validBuyers.push(result.data)
+      }
+    }
+
+    if (errors.length > 0) {
+      return NextResponse.json({ success: false, message: 'Validation errors', errors }, { status: 400 })
+    }
+
+    // Create buyers in DB with ownerId linked
+    const createdBuyers = []
+    for (const buyer of validBuyers) {
+      const buyerData = {
+        ...buyer,
+        bhk: mapBhkToPrisma(buyer.bhk),
+        timeline: mapTimelineToPrisma(buyer.timeline),
+        source: mapSourceToPrisma(buyer.source),
+        tags: Array.isArray(buyer.tags) ? buyer.tags : (buyer.tags ? [buyer.tags] : []),
+        ownerId: dbUser.id,
+      }
+
+      const createdBuyer = await prisma.buyer.create({ data: buyerData })
+
+      await prisma.buyerHistory.create({
+        data: {
+          buyerId: createdBuyer.id,
+          changedBy: supabaseUser.email || 'unknown',
+          diff: { created: buyer },
+        },
+      })
+
+      createdBuyers.push(createdBuyer)
+    }
+
+    return NextResponse.json({ success: true, message: `Imported ${createdBuyers.length} buyers`, buyers: createdBuyers })
+
+  } catch (error: any) {
+    if (error instanceof ZodError) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Validation error',
+          errors: error.errors,
+        },
+        { status: 400 }
+      )
+    }
+
+    console.error(error)
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: error?.message || 'Server Error',
+      },
+      { status: 500 }
+    )
   }
 }

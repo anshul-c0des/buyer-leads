@@ -1,17 +1,26 @@
 import { z } from 'zod'
 
+
+const emptyToUndefinedNumber = z.preprocess(
+  (val) => (val === '' ? undefined : val),
+  z.coerce.number().optional()
+)
+
+const emptyToUndefinedString = z.preprocess(
+  (val) => (val === '' || val === null ? undefined : val),
+  z.string().optional()
+)
+
 export const buyerSchema = z.object({
     fullName: z.string().min(2, 'Full name must be at least 2 characters'),
     email: z.string().email('Invalid email').optional().or(z.literal('').transform(() => undefined)),
     phone: z.string().regex(/^\d{10,15}$/, 'Phone must be 10 to 15 digits'),
     city: z.enum(['Chandigarh', 'Mohali', 'Zirakpur', 'Panchkula', 'Other']),
     propertyType: z.enum(['Apartment', 'Villa', 'Plot', 'Office', 'Retail']),
-    bhk: z.enum(['Studio', '1', '2', '3', '4']).nullable()
-    .transform((val) => (val === null ? undefined : val))
-    .optional(),
+    bhk: z.string().optional().transform((val) => (val === null || val === '' ? undefined : val)),
     purpose: z.enum(['Buy', 'Rent']),
-    budgetMin: z.coerce.number().optional(),
-    budgetMax: z.coerce.number().optional(),
+    budgetMin: emptyToUndefinedNumber,
+    budgetMax: emptyToUndefinedNumber,
     timeline: z.enum([
       'ZeroToThreeMonths',
       'ThreeToSixMonths',

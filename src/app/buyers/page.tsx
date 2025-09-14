@@ -266,6 +266,7 @@ export default function BuyersPage() {
             <th className="border border-gray-300 p-2 text-left">Phone</th>
             <th className="border border-gray-300 p-2 text-left">City</th>
             <th className="border border-gray-300 p-2 text-left">Property Type</th>
+            <th className="border border-gray-300 p-2 text-left">BHK</th>
             <th className="border border-gray-300 p-2 text-left">Budget (Min-Max)</th>
             <th className="border border-gray-300 p-2 text-left">Timeline</th>
             <th className="border border-gray-300 p-2 text-left">Status</th>
@@ -293,6 +294,9 @@ export default function BuyersPage() {
                 <td className="border border-gray-300 p-2">{buyer.phone}</td>
                 <td className="border border-gray-300 p-2">{buyer.city}</td>
                 <td className="border border-gray-300 p-2">{buyer.propertyType}</td>
+                <td className="border border-gray-300 p-2">
+                  {["Apartment", "Villa"].includes(buyer.propertyType ?? "") ? buyer.bhk ?? "-" : "-"}
+                </td>
                 <td className="border border-gray-300 p-2">
                   {buyer.budgetMin ?? "-"} - {buyer.budgetMax ?? "-"}
                 </td>

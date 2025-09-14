@@ -1,8 +1,8 @@
 "use client"
 
-import { useEffect, useState } from 'react'
-import { useSearchParams, useRouter } from 'next/navigation'
-import { supabase } from '@/lib/supabaseClient'
+import { useEffect, useState } from "react"
+import { useSearchParams, useRouter } from "next/navigation"
+import { supabase } from "@/lib/supabaseClient"
 
 export default function ExportBuyersPage() {
   const searchParams = useSearchParams()
@@ -14,10 +14,11 @@ export default function ExportBuyersPage() {
       const {
         data: { session },
       } = await supabase.auth.getSession()
+
       if (session?.access_token) {
         setAccessToken(session.access_token)
       } else {
-        router.push('/login')
+        router.push("/login?redirect=/buyers")
       }
     }
 
@@ -36,19 +37,20 @@ export default function ExportBuyersPage() {
       })
 
       if (!res.ok) {
-        alert('Failed to export buyers')
-        router.back()
+        alert("Failed to export buyers")
+        router.push("/buyers")
         return
       }
 
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
-      const a = document.createElement('a')
+      const a = document.createElement("a")
       a.href = url
-      a.download = 'buyers.csv'
+      a.download = "buyers.csv"
       a.click()
       window.URL.revokeObjectURL(url)
-      router.back()
+
+      router.push("/buyers")
     }
 
     exportCsv()

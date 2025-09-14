@@ -31,7 +31,7 @@ export function mapTimelineToPrisma(t?: string): Timeline {
 export const sourceMap: Record<string, Source> = {
   Website: Source.Website,
   Referral: Source.Referral,
-  'Walk-in': Source.WalkIn,
+  'WalkIn': Source.WalkIn,
   Call: Source.Call,
   Other: Source.Other,
 }

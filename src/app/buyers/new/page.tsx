@@ -233,7 +233,9 @@ export default function NewBuyerPage() {
           <Input
             id="budgetMin"
             type="number"
-            {...register("budgetMin", { valueAsNumber: true })}
+            {...register("budgetMin", {
+              setValueAs: (v) => (v === "" ? null : Number(v)),
+            })}
           />
           {errors.budgetMin && (
             <p className="text-sm text-red-500">{errors.budgetMin.message}</p>
@@ -246,7 +248,9 @@ export default function NewBuyerPage() {
           <Input
             id="budgetMax"
             type="number"
-            {...register("budgetMax", { valueAsNumber: true })}
+            {...register("budgetMax", {
+              setValueAs: (v) => (v === "" ? null : Number(v)),
+            })}
           />
           {errors.budgetMax && (
             <p className="text-sm text-red-500">{errors.budgetMax.message}</p>
@@ -292,7 +296,7 @@ export default function NewBuyerPage() {
                 <SelectContent>
                   <SelectItem value="Website">Website</SelectItem>
                   <SelectItem value="Referral">Referral</SelectItem>
-                  <SelectItem value="Walk-in">Walk-in</SelectItem>
+                  <SelectItem value="WalkIn">Walk-in</SelectItem>
                   <SelectItem value="Call">Call</SelectItem>
                   <SelectItem value="Other">Other</SelectItem>
                 </SelectContent>

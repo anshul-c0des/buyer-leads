@@ -2,41 +2,47 @@
 
 import { useState, useEffect } from "react"
 import { useRouter, useParams } from "next/navigation"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
+import { buyerSchema } from "@/lib/zod/buyerSchema"
 import { Input } from "@/components/ui/input"
-import { Select, SelectContent,SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
+import { Label } from "@/components/ui/label"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { supabase } from "@/lib/supabaseClient"
 
-type Buyer = {
-  id: string
-  fullName: string
-  phone: string
-  email?: string
-  city?: string
-  propertyType?: string
-  bhk?: string | null
-  budgetMin?: number | null
-  budgetMax?: number | null
-  timeline?: string | null
-  status?: string | null
-  source?: string | null
-  tags?: string[]
-  updatedAt: string
-}
+type BuyerFormData = z.infer<typeof buyerSchema>
 
-export default function BuyerEditPage() {
+export default function EditBuyerPage() {
   const router = useRouter()
   const params = useParams()
-  const id = params.id
+  const id = params.id as string
 
-  const [buyer, setBuyer] = useState<Buyer | null>(null)
   const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
-  const [formData, setFormData] = useState<Partial<Buyer>>({})
 
-  // Fetch buyer on mount
+  const {
+    register,
+    control,
+    handleSubmit,
+    reset,
+    watch,
+    formState: { errors, isSubmitting },
+  } = useForm<BuyerFormData>({
+    resolver: zodResolver(buyerSchema),
+    defaultValues: {},
+  })
+
+  const bhkReverseMap: Record<string, string> = {
+    Studio: "Studio",
+    One: "1",
+    Two: "2",
+    Three: "3",
+    Four: "4",
+  }
+  
   useEffect(() => {
     if (!id) return
     async function fetchBuyer() {
@@ -45,8 +51,13 @@ export default function BuyerEditPage() {
         const res = await fetch(`/api/buyers/${id}`)
         if (!res.ok) throw new Error("Failed to fetch buyer")
         const data = await res.json()
-        setBuyer(data.buyer)
-        setFormData(data.buyer)
+  
+        const buyerData = {
+          ...data.buyer,
+          bhk: data.buyer.bhk ? bhkReverseMap[data.buyer.bhk] ?? "" : "",
+        }
+  
+        reset(buyerData)
       } catch (err: any) {
         setError(err.message)
       } finally {
@@ -54,69 +65,52 @@ export default function BuyerEditPage() {
       }
     }
     fetchBuyer()
-  }, [id])
+  }, [id, reset])
+  
 
-  function onChange(field: keyof Buyer, value: any) {
-    setFormData((prev) => ({ ...prev, [field]: value }))
-  }
-
-  async function onSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setSaving(true)
-    setError(null)
-
+  const onSubmit = async (data: BuyerFormData) => {
     try {
-      const { data: { session }} = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-
-      // Sanitize formData for enums (convert "" to null)
-      const payload = {
-        ...formData,
-        email: formData.email === null ? "" : formData.email ?? "",
-        bhk: formData.bhk || undefined,
-        timeline: formData.timeline === "" ? null : formData.timeline,
-        status: formData.status === "" ? null : formData.status,
-        source: formData.source === "" ? null : formData.source,
-      }
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
 
       const res = await fetch(`/api/buyers/${id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json", "Authorization": `Bearer ${accessToken}` },
-        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body: JSON.stringify(data),
       })
 
-      const data = await res.json()
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Failed to save")
+      const result = await res.json()
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Failed to update buyer")
       }
 
-      router.back()
+      router.push("/buyers")
     } catch (err: any) {
       setError(err.message)
-    } finally {
-      setSaving(false)
     }
   }
 
   async function handleDelete() {
-    if (!confirm("Are you sure you want to delete this buyer? This action cannot be undone.")) {
-      return
-    }
-  
+    if (!confirm("Are you sure you want to delete this buyer?")) return
+
     setDeleting(true)
     try {
-      const { data: { session }} = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
+      const { data: { session } } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
       const res = await fetch(`/api/buyers/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${accessToken}`}
+        headers: { Authorization: `Bearer ${accessToken}` },
       })
+
       const data = await res.json()
-  
       if (!res.ok || !data.success) {
         throw new Error(data.message || "Delete failed")
       }
-  
+
       router.push("/buyers")
     } catch (err: any) {
       alert(err.message)
@@ -125,151 +119,191 @@ export default function BuyerEditPage() {
     }
   }
 
-  if (loading) return <div>Loading...</div>
-  if (error) return <div className="text-red-600">{error}</div>
-  if (!buyer) return <div>Buyer not found</div>
+  if (loading) return <p>Loading...</p>
+  if (error) return <p className="text-red-500">{error}</p>
 
   return (
-    <div className="max-w-4xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Edit Buyer: {buyer.fullName}</h1>
-      <form onSubmit={onSubmit} className="space-y-4">
-        <Input
-          placeholder="Full Name"
-          value={formData.fullName || ""}
-          onChange={(e) => onChange("fullName", e.target.value)}
-          required
-        />
+    <div className="max-w-2xl mx-auto p-6">
+      <h1 className="text-2xl font-bold mb-6">Edit Buyer Lead</h1>
 
-        <Input
-          placeholder="Phone"
-          value={formData.phone || ""}
-          onChange={(e) => onChange("phone", e.target.value)}
-          required
-        />
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        {/* Full Name */}
+        <div>
+          <Label>Full Name</Label>
+          <Input {...register("fullName")} />
+          {errors.fullName && <p className="text-sm text-red-500">{errors.fullName.message}</p>}
+        </div>
 
-        <Input
-          type="email"
-          placeholder="Email"
-          value={formData.email || ""}
-          onChange={(e) => onChange("email", e.target.value)}
-        />
+        {/* Phone */}
+        <div>
+          <Label>Phone</Label>
+          <Input {...register("phone")} />
+          {errors.phone && <p className="text-sm text-red-500">{errors.phone.message}</p>}
+        </div>
 
-        <Input
-          placeholder="City"
-          value={formData.city || ""}
-          onChange={(e) => onChange("city", e.target.value)}
-        />
+        {/* Email */}
+        <div>
+          <Label>Email</Label>
+          <Input {...register("email")} />
+          {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
+        </div>
 
-        <Input
-          placeholder="Property Type"
-          value={formData.propertyType || ""}
-          onChange={(e) => onChange("propertyType", e.target.value)}
-        />
+        {/* City */}
+        <div>
+          <Label>City</Label>
+          <Input {...register("city")} />
+          {errors.city && <p className="text-sm text-red-500">{errors.city.message}</p>}
+        </div>
 
-        {/* BHK Select */}
-        <Select
-          value={formData.bhk || ""}
-          onValueChange={(val) => onChange("bhk", val === "" ? null : val)}
-        >
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="BHK" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            <SelectItem value="Studio">Studio</SelectItem>
-            <SelectItem value="1">1</SelectItem>
-            <SelectItem value="2">2</SelectItem>
-            <SelectItem value="3">3</SelectItem>
-            <SelectItem value="4">4</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Property Type */}
+        <div>
+          <Label>Property Type</Label>
+          <Input {...register("propertyType")} />
+          {errors.propertyType && <p className="text-sm text-red-500">{errors.propertyType.message}</p>}
+        </div>
+
+        {/* BHK */}
+        {["Apartment", "Villa"].includes(watch("propertyType") ?? "") && (
+          <div>
+            <Label>BHK</Label>
+            <Controller
+              name="bhk"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} value={field.value ?? undefined}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select BHK" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Studio">Studio</SelectItem>
+                    <SelectItem value="1">1</SelectItem>
+                    <SelectItem value="2">2</SelectItem>
+                    <SelectItem value="3">3</SelectItem>
+                    <SelectItem value="4">4</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.bhk && (
+              <p className="text-sm text-red-500">{errors.bhk.message}</p>
+            )}
+          </div>
+        )}
+
 
         {/* Budget Min */}
-        <Input
-          type="number"
-          placeholder="Budget Min"
-          value={formData.budgetMin ?? ""}
-          onChange={(e) =>
-            onChange("budgetMin", e.target.value ? Number(e.target.value) : null)
-          }
-        />
+        <div>
+          <Label>Minimum Budget</Label>
+          <Input
+            type="number"
+            {...register("budgetMin", {
+              setValueAs: (v) => (v === "" ? null : Number(v)),
+            })}
+          />
+          {errors.budgetMin && <p className="text-sm text-red-500">{errors.budgetMin.message}</p>}
+        </div>
 
         {/* Budget Max */}
-        <Input
-          type="number"
-          placeholder="Budget Max"
-          value={formData.budgetMax ?? ""}
-          onChange={(e) =>
-            onChange("budgetMax", e.target.value ? Number(e.target.value) : null)
-          }
-        />
+        <div>
+          <Label>Maximum Budget</Label>
+          <Input
+            type="number"
+            {...register("budgetMax", {
+              setValueAs: (v) => (v === "" ? null : Number(v)),
+            })}
+          />
+          {errors.budgetMax && <p className="text-sm text-red-500">{errors.budgetMax.message}</p>}
+        </div>
 
-        {/* Timeline Select */}
-        <Select
-          value={formData.timeline || ""}
-          onValueChange={(val) => onChange("timeline", val === "" ? null : val)}
-        >
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Timeline" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            <SelectItem value="ZeroToThreeMonths">0-3 Months</SelectItem>
-            <SelectItem value="ThreeToSixMonths">3-6 Months</SelectItem>
-            <SelectItem value="MoreThanSixMonths">6+ Months</SelectItem>
-            <SelectItem value="Exploring">Exploring</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Timeline */}
+        <div>
+          <Label>Timeline</Label>
+          <Controller
+            name="timeline"
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value || ""}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select timeline" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ZeroToThreeMonths">0-3 Months</SelectItem>
+                  <SelectItem value="ThreeToSixMonths">3-6 Months</SelectItem>
+                  <SelectItem value="MoreThanSixMonths">6+ Months</SelectItem>
+                  <SelectItem value="Exploring">Exploring</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.timeline && <p className="text-sm text-red-500">{errors.timeline.message}</p>}
+        </div>
 
-        {/* Status Select */}
-        <Select
-          value={formData.status || ""}
-          onValueChange={(val) => onChange("status", val === "" ? null : val)}
-        >
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            <SelectItem value="New">New</SelectItem>
-            <SelectItem value="Contacted">Contacted</SelectItem>
-            <SelectItem value="Interested">Interested</SelectItem>
-            <SelectItem value="NotInterested">Not Interested</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Status */}
+        <div>
+          <Label>Status</Label>
+          <Controller
+            name="status"
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value || ""}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="New">New</SelectItem>
+                  <SelectItem value="Qualified">Qualified</SelectItem>
+                  <SelectItem value="Contacted">Contacted</SelectItem>
+                  <SelectItem value="Visited">Visited</SelectItem>
+                  <SelectItem value="Negotiation">Negotiation</SelectItem>
+                  <SelectItem value="Converted">Converted</SelectItem>
+                  <SelectItem value="Dropped">Dropped</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.status && <p className="text-sm text-red-500">{errors.status.message}</p>}
+        </div>
 
-        {/* Source Select */}
-        <Select
-          value={formData.source || ""}
-          onValueChange={(val) => onChange("source", val === "" ? null : val)}
-        >
-          <SelectTrigger className="w-[200px]">
-            <SelectValue placeholder="Source" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="none">None</SelectItem>
-            <SelectItem value="Website">Website</SelectItem>
-            <SelectItem value="Referral">Referral</SelectItem>
-            <SelectItem value="WalkIn">Walk-in</SelectItem>
-            <SelectItem value="Call">Call</SelectItem>
-            <SelectItem value="Other">Other</SelectItem>
-          </SelectContent>
-        </Select>
+        {/* Source */}
+        <div>
+          <Label>Source</Label>
+          <Controller
+            name="source"
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value || ""}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select source" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Website">Website</SelectItem>
+                  <SelectItem value="Referral">Referral</SelectItem>
+                  <SelectItem value="WalkIn">Walk-in</SelectItem>
+                  <SelectItem value="Call">Call</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.source && <p className="text-sm text-red-500">{errors.source.message}</p>}
+        </div>
 
-        <Button type="submit" disabled={saving}>
-          {saving ? "Saving..." : "Save"}
-        </Button>
-        <Button
-          variant="destructive"
-          type="button"
-          onClick={handleDelete}
-          disabled={deleting}
-        >
-          {deleting ? 'Deleting...' : 'Delete Buyer'}
-        </Button>
+        {/* Buttons */}
+        <div className="flex gap-4">
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? "Saving..." : "Save Changes"}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={deleting}
+            onClick={handleDelete}
+          >
+            {deleting ? "Deleting..." : "Delete Buyer"}
+          </Button>
+        </div>
 
-
-        {error && <p className="text-red-600 mt-2">{error}</p>}
+        {error && <p className="text-red-600 mt-4">{error}</p>}
       </form>
     </div>
   )
