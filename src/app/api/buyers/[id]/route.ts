@@ -66,14 +66,16 @@ export async function POST(req: NextRequest) {
 }
  
 
-export async function PUT(req: Request, { params }: { params: { id: string } }) {
+export async function PUT(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }>}) {
   try {
-    const user = await getAuthenticatedUser(req)
+    const user = await getAuthenticatedUser(req);
     if (!user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
     }
 
-    const rateResult = checkRateLimit(user.id, 10, 60 * 1000)
+    const rateResult = checkRateLimit(user.id, 10, 60 * 1000);
     if (!rateResult.allowed) {
       return NextResponse.json(
         {
@@ -81,28 +83,34 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
           message: `Rate limit exceeded. Try again in ${rateResult.retryAfter}s.`,
         },
         { status: 429 }
-      )
+      );
     }
 
-    const id = params.id
-    const body = await req.json()
-    const data = buyerSchema.parse(body)
+    const { id } = await context.params;
 
-    const existing = await prisma.buyer.findUnique({ where: { id } })
+    const body = await req.json();
+    const data = buyerSchema.parse(body);
+
+    const existing = await prisma.buyer.findUnique({ where: { id } });
     if (!existing) {
-      return NextResponse.json({ success: false, message: 'Buyer not found' }, { status: 404 })
+      return NextResponse.json({ success: false, message: 'Buyer not found' }, { status: 404 });
     }
 
-    // Authorization: allow only owner or admin
     if (existing.ownerId !== user.id && user.role !== 'ADMIN') {
-      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
+      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
     }
 
-    if (body.updatedAt && new Date(body.updatedAt).toISOString() !== existing.updatedAt.toISOString()) {
-      return NextResponse.json({ success: false, message: 'Record changed, please refresh.' }, { status: 409 })
+    if (
+      body.updatedAt &&
+      new Date(body.updatedAt).toISOString() !== existing.updatedAt.toISOString()
+    ) {
+      return NextResponse.json(
+        { success: false, message: 'Record changed, please refresh.' },
+        { status: 409 }
+      );
     }
 
-    const bhk = mapBhkToPrisma(data.bhk)
+    const bhk = mapBhkToPrisma(data.bhk);
 
     const updated = await prisma.buyer.update({
       where: { id },
@@ -111,9 +119,9 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         bhk: bhk ?? null,
         timeline: mapTimelineToPrisma(data.timeline),
         source: mapSourceToPrisma(data.source),
-        tags: Array.isArray(data.tags) ? data.tags.map(tag => tag.value) : [],
+        tags: Array.isArray(data.tags) ? data.tags.map((tag) => tag.value) : [],
       },
-    })
+    });
 
     await prisma.buyerHistory.create({
       data: {
@@ -124,15 +132,15 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
           after: updated,
         },
       },
-    })
+    });
 
-    return NextResponse.json({ success: true, buyer: updated })
+    return NextResponse.json({ success: true, buyer: updated });
   } catch (error: any) {
-    console.error(error)
+    console.error(error);
     return NextResponse.json(
       { success: false, message: error?.message || 'Server Error' },
       { status: 500 }
-    )
+    );
   }
 }
 
