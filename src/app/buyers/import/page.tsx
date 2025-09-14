@@ -1,9 +1,12 @@
 'use client'
 
-import Papa from 'papaparse'
 import { useState } from 'react'
+import Papa from 'papaparse'
 import { buyerSchema } from '@/lib/zod/buyerSchema'
 import { createClient } from '@supabase/supabase-js'
+import { toast } from 'sonner'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,16 +22,16 @@ export default function ImportPage() {
   const [parsedRows, setParsedRows] = useState<any[]>([])
   const [errors, setErrors] = useState<ValidationError[]>([])
   const [isLoading, setIsLoading] = useState(false)
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
   function normalizeBhk(rawBhk: unknown): string | undefined {
     if (typeof rawBhk !== 'string') return undefined
     const trimmed = rawBhk.trim()
     if (trimmed === '' || trimmed === '-') return undefined
+
     const mapping: Record<string, string> = {
       'Studio': 'Studio',
       '1': 'One',
-      '2': 'Two', 
+      '2': 'Two',
       '3': 'Three',
       '4': 'Four',
       'One': '1',
@@ -36,6 +39,7 @@ export default function ImportPage() {
       'Three': '3',
       'Four': '4',
     }
+
     return mapping[trimmed] ?? undefined
   }
 
@@ -43,7 +47,6 @@ export default function ImportPage() {
     const file = e.target.files?.[0]
     if (!file) return
 
-    setSuccessMessage(null)
     setParsedRows([])
     setErrors([])
 
@@ -57,17 +60,15 @@ export default function ImportPage() {
 
         rows.slice(0, 200).forEach((row, index) => {
           let normalizedBhk = normalizeBhk(row.bhk)
-        
+
           if (row.propertyType !== 'Apartment' && row.propertyType !== 'Villa') {
             normalizedBhk = undefined
           }
-        
+
           row.bhk = normalizedBhk
-          console.log(`Row ${index + 2} after normalizeBhk:`, row.bhk)
-        
+
           const result = buyerSchema.safeParse(row)
           if (!result.success) {
-            console.log('Validation errors:', result.error.errors)
             errList.push({
               row: index + 2,
               message: result.error.errors
@@ -77,17 +78,22 @@ export default function ImportPage() {
           } else {
             validRows.push(result.data)
           }
-        })      
+        })
 
         setParsedRows(validRows)
         setErrors(errList)
+
+        if (errList.length > 0) {
+          toast.warning(`${errList.length} validation error(s) found.`)
+        } else {
+          toast.success(`Parsed ${validRows.length} valid rows.`)
+        }
       },
     })
   }
 
   const handleImport = async () => {
     setIsLoading(true)
-    setSuccessMessage(null)
 
     const {
       data: { session },
@@ -95,7 +101,7 @@ export default function ImportPage() {
     const token = session?.access_token
 
     if (!token) {
-      alert('You must be logged in to import leads.')
+      toast.error('You must be logged in to import leads.')
       setIsLoading(false)
       return
     }
@@ -116,29 +122,32 @@ export default function ImportPage() {
         throw new Error(data.message || 'Import failed')
       }
 
-      setSuccessMessage(data.message)
+      toast.success(data.message || 'Import successful ✅')
       setParsedRows([])
     } catch (err: any) {
-      alert(`Import failed: ${err.message}`)
+      toast.error(`Import failed: ${err.message}`)
     } finally {
       setIsLoading(false)
     }
   }
 
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <h1 className="text-xl font-semibold mb-4">CSV Buyer Import</h1>
+    <div className="p-6 max-w-4xl mx-auto">
+      <h1 className="text-2xl font-bold mb-6">Import CSV file..</h1>
 
-      <input
-        type="file"
-        accept=".csv"
-        onChange={handleFile}
-        className="mb-4"
-      />
+      <div className="mb-4 ">
+        <Input
+          type="file"
+          accept=".csv"
+          onChange={handleFile}
+        />
+      </div>
 
       {errors.length > 0 && (
-        <div className="mt-4">
-          <h2 className="text-red-700 font-semibold mb-2">Validation Errors ({errors.length}):</h2>
+        <div className="mt-6">
+          <h2 className="text-red-700 font-semibold mb-2">
+            ❌ Validation Errors ({errors.length}):
+          </h2>
           <div className="overflow-auto max-h-96 border border-gray-300 rounded">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-100">
@@ -151,7 +160,9 @@ export default function ImportPage() {
                 {errors.map((err, idx) => (
                   <tr key={idx}>
                     <td className="border px-3 py-1">{err.row}</td>
-                    <td className="border px-3 py-1 text-red-600">{err.message}</td>
+                    <td className="border px-3 py-1 text-red-600">
+                      {err.message}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -162,22 +173,19 @@ export default function ImportPage() {
 
       {parsedRows.length > 0 && (
         <div className="mt-6 flex flex-col gap-3">
-          <div className="text-green-700">
-            {parsedRows.length} valid row{parsedRows.length > 1 ? 's' : ''} ready to import.
+          <div className="text-green-700 font-medium">
+            ✅ {parsedRows.length} valid row{parsedRows.length > 1 ? 's' : ''} ready to import.
           </div>
-          <button
-            className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 disabled:bg-gray-400"
+          <Button
+            variant="default"
+            className="w-fit"
             onClick={handleImport}
             disabled={isLoading}
           >
-            {isLoading ? 'Importing...' : `Import ${parsedRows.length} Row${parsedRows.length > 1 ? 's' : ''}`}
-          </button>
-        </div>
-      )}
-
-      {successMessage && (
-        <div className="mt-4 text-green-700 font-medium">
-          ✅ {successMessage}
+            {isLoading
+              ? 'Importing...'
+              : `Import ${parsedRows.length} Row${parsedRows.length > 1 ? 's' : ''}`}
+          </Button>
         </div>
       )}
     </div>

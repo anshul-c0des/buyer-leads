@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabaseClient"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { toast } from "sonner"
+import { Loader2 } from "lucide-react"
 
 export default function SignupPage() {
   const router = useRouter()
@@ -20,7 +22,7 @@ export default function SignupPage() {
     setError(null)
 
     if (!name || !email || !phone || !password) {
-      setError("All fields are required")
+      toast.error("All fields are required")
       setLoading(false)
       return
     }
@@ -37,13 +39,13 @@ export default function SignupPage() {
     })
 
     if (error) {
-      setError(error.message)
+      toast.error(error.message)
       setLoading(false)
       return
     }
 
     if (!data.session) {
-      setError("Signup successful, but no active session. Please check your email to confirm.")
+      toast.error("Signup successful, but no active session. Please check your email to confirm.")
       setLoading(false)
       return
     }
@@ -68,9 +70,10 @@ export default function SignupPage() {
         return
       }
 
+      toast.success("Sign up successful!")
       router.push("/buyers")
     } catch (syncError) {
-      setError("Failed to sync user")
+      toast.error("Failed to sync user")
       setLoading(false)
     }
   }
@@ -125,7 +128,8 @@ export default function SignupPage() {
 
       {error && <p className="text-red-600 mb-4">{error}</p>}
 
-      <Button onClick={handleSignup} disabled={loading}>
+      <Button onClick={handleSignup} disabled={loading} className=" cursor-pointer flex items-center justify-center gap-2">
+        {loading && <Loader2 className="animate-spin h-4 w-4" />}
         {loading ? "Signing up..." : "Sign Up"}
       </Button>
 

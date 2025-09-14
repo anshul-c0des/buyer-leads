@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, usePathname } from "next/navigation"
 import { supabase } from "@/lib/supabaseClient"
 import {
   DropdownMenu,
@@ -11,9 +11,13 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
+import Image from "next/image"
+import { BadgePlus, LayoutDashboard, LogOut } from "lucide-react"
+import { toast } from "sonner"
 
 export default function Navbar() {
   const router = useRouter()
+  const pathname = usePathname()
   const [user, setUser] = useState<{ email: string | null; initial: string | null } | null>(null)
 
   useEffect(() => {
@@ -38,6 +42,8 @@ export default function Navbar() {
       })
     } 
     
+    fetchUser()
+    
     const { data: authListener } = supabase.auth.onAuthStateChange(() => {
       fetchUser()
     })
@@ -51,18 +57,25 @@ export default function Navbar() {
     await supabase.auth.signOut()
     setUser(null)
     router.push("/buyers")
+    toast.success("Logged out successfully!")
   }
+
+  const onLoginPage = pathname === "/login"
+  const onSignupPage = pathname === "/sign-up"
 
   return (
     <nav className="flex justify-between items-center px-6 py-4 border-b border-gray-200">
       <Link href="/buyers">
-        <h1 className="text-xl font-bold cursor-pointer">Buyer Base</h1>
+        <div className="flex items-center gap-1">
+          <Image src="/logo.png" alt="BuyerBase Logo" width={35} height={35} />
+          <h1 className="text-xl font-bold cursor-pointer">Buyer Base</h1>
+        </div>
       </Link>
 
       <div className="flex items-center gap-4">
         {user && (
-          <Button variant="secondary" onClick={() => router.push("/buyers/new")}>
-            Add Buyer
+          <Button variant="secondary" className="cursor-pointer" onClick={() => router.push("/buyers/new")}>
+            <BadgePlus /> Add Lead
           </Button>
         )}
 
@@ -71,20 +84,38 @@ export default function Navbar() {
             <DropdownMenuTrigger asChild>
               <button
                 aria-label="User menu"
-                className="w-10 h-10 rounded-full bg-gray-800 text-white flex items-center justify-center font-semibold"
+                className="w-10 h-10 rounded-full bg-gray-800 text-white flex items-center justify-center font-semibold cursor-pointer"
               >
                 {user.initial}
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-40">
               <DropdownMenuItem onClick={() => router.push("/dashboard")}>
-                Dashboard
+                <LayoutDashboard /> Dashboard
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={handleLogout}>Logout</DropdownMenuItem>
+              <DropdownMenuItem onClick={handleLogout} className="text-red-500 hover:text-red-700">
+               <LogOut className="text-current group-hover:text-red-800" /> Logout
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         ) : (
-          <Button onClick={() => router.push("/login")}>Login</Button>
+          <>
+            {onLoginPage && (
+              <Button className="cursor-pointer" onClick={() => router.push("/sign-up")}>
+                Sign Up
+              </Button>
+            )}
+            {onSignupPage && (
+              <Button className="cursor-pointer" onClick={() => router.push("/login")}>
+                Login
+              </Button>
+            )}
+            {!onLoginPage && !onSignupPage && (
+              <Button className="cursor-pointer" onClick={() => router.push("/login")}>
+                Login
+              </Button>
+            )}
+          </>
         )}
       </div>
     </nav>

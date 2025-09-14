@@ -18,6 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { supabase } from "@/lib/supabaseClient"
+import { toast } from "sonner"
+import { HashLoader } from "react-spinners"
+import { BadgePlus, Save } from "lucide-react"
 
 type FormData = z.infer<typeof buyerSchema>
 
@@ -30,38 +33,41 @@ export default function NewBuyerPage() {
     control,
     handleSubmit,
     watch,
-    formState: { errors },
+    reset,
+    formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(buyerSchema),
   })
 
   useEffect(() => {
     async function checkAuth() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+      try {
+        const {
+          data: { session },
+        } = await supabase.auth.getSession()
 
-      if (!session) {
+        if (!session) {
+          router.replace("/login")
+        } else {
+          setLoading(false)
+          reset() // reset form if needed
+        }
+      } catch {
         router.replace("/login")
-      } else {
-        setLoading(false)
       }
     }
     checkAuth()
-  }, [router])
+  }, [router, reset])
 
-  const [submitting, setSubmitting] = useState(false)
   const propertyType = watch("propertyType")
 
   const onSubmit = async (data: FormData) => {
-    setSubmitting(true)
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession()
-    const accessToken = session?.access_token
-
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      const accessToken = session?.access_token
+
       const res = await fetch("/api/buyers", {
         method: "POST",
         headers: {
@@ -73,56 +79,57 @@ export default function NewBuyerPage() {
 
       const result = await res.json()
 
-      if (!res.ok) {
-        alert(result.message || "Error creating lead")
-      } else {
-        alert("Lead created successfully!")
-        router.push('/buyers')
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Error creating lead")
       }
-    } catch (err) {
-      console.error("Fetch error:", err)
-      alert("Something went wrong.")
-    } finally {
-      setSubmitting(false)
+
+      toast.success("Lead created successfully!")
+      router.push("/buyers")
+    } catch (err: any) {
+      toast.error(err.message || "Something went wrong.")
     }
   }
 
-  if (loading) return <p>Loading...</p>
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <HashLoader />
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Create Buyer Lead</h1>
+    <div className="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow-md">
+      <h1 className="text-3xl font-extrabold mb-8 border-b pb-3">
+        Create Buyer Lead
+      </h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Full Name */}
-        <div className="space-y-2">
+        <div className="grid gap-1">
           <Label htmlFor="fullName">Full Name</Label>
           <Input id="fullName" {...register("fullName")} />
           {errors.fullName && (
-            <p className="text-sm text-red-500">{errors.fullName.message}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.fullName.message}</p>
           )}
         </div>
 
-        {/* Email */}
-        <div className="space-y-2">
+        <div className="grid gap-1">
           <Label htmlFor="email">Email</Label>
           <Input id="email" {...register("email")} />
           {errors.email && (
-            <p className="text-sm text-red-500">{errors.email.message}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
           )}
         </div>
 
-        {/* Phone */}
-        <div className="space-y-2">
+        <div className="grid gap-1">
           <Label htmlFor="phone">Phone</Label>
           <Input id="phone" {...register("phone")} />
           {errors.phone && (
-            <p className="text-sm text-red-500">{errors.phone.message}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
           )}
         </div>
 
-        {/* City */}
-        <div className="space-y-2">
+        <div className="grid gap-1">
           <Label>City</Label>
           <Controller
             name="city"
@@ -143,12 +150,11 @@ export default function NewBuyerPage() {
             )}
           />
           {errors.city && (
-            <p className="text-sm text-red-500">{errors.city.message}</p>
+            <p className="text-sm text-red-600">{errors.city.message}</p>
           )}
         </div>
 
-        {/* Property Type */}
-        <div className="space-y-2">
+        <div className="grid gap-1">
           <Label>Property Type</Label>
           <Controller
             name="propertyType"
@@ -169,22 +175,18 @@ export default function NewBuyerPage() {
             )}
           />
           {errors.propertyType && (
-            <p className="text-sm text-red-500">{errors.propertyType.message}</p>
+            <p className="text-sm text-red-600">{errors.propertyType.message}</p>
           )}
         </div>
 
-        {/* BHK (conditional for Apartment or Villa) */}
         {["Apartment", "Villa"].includes(propertyType ?? "") && (
-          <div className="space-y-2">
+          <div className="grid gap-1">
             <Label>BHK</Label>
             <Controller
               name="bhk"
               control={control}
               render={({ field }) => (
-                <Select
-                  onValueChange={field.onChange}
-                  value={field.value ?? undefined}
-                >
+                <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select BHK" />
                   </SelectTrigger>
@@ -199,19 +201,18 @@ export default function NewBuyerPage() {
               )}
             />
             {errors.bhk && (
-              <p className="text-sm text-red-500">{errors.bhk.message}</p>
+              <p className="mt-1 text-sm text-red-600">{errors.bhk.message}</p>
             )}
           </div>
         )}
 
-        {/* Purpose */}
-        <div className="space-y-2">
+        <div className="grid gap-1">
           <Label>Purpose</Label>
           <Controller
             name="purpose"
             control={control}
             render={({ field }) => (
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={field.onChange} value={field.value || ""}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select purpose" />
                 </SelectTrigger>
@@ -223,12 +224,11 @@ export default function NewBuyerPage() {
             )}
           />
           {errors.purpose && (
-            <p className="text-sm text-red-500">{errors.purpose.message}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.purpose.message}</p>
           )}
         </div>
 
-        {/* Budget Min */}
-        <div className="space-y-2">
+        <div className="grid gap-1">
           <Label htmlFor="budgetMin">Minimum Budget (INR)</Label>
           <Input
             id="budgetMin"
@@ -238,12 +238,11 @@ export default function NewBuyerPage() {
             })}
           />
           {errors.budgetMin && (
-            <p className="text-sm text-red-500">{errors.budgetMin.message}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.budgetMin.message}</p>
           )}
         </div>
 
-        {/* Budget Max */}
-        <div className="space-y-2">
+        <div className="grid gap-1">
           <Label htmlFor="budgetMax">Maximum Budget (INR)</Label>
           <Input
             id="budgetMax"
@@ -253,12 +252,11 @@ export default function NewBuyerPage() {
             })}
           />
           {errors.budgetMax && (
-            <p className="text-sm text-red-500">{errors.budgetMax.message}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.budgetMax.message}</p>
           )}
         </div>
 
-        {/* Timeline */}
-        <div className="space-y-2">
+        <div className="grid gap-1">
           <Label>Timeline</Label>
           <Controller
             name="timeline"
@@ -278,12 +276,11 @@ export default function NewBuyerPage() {
             )}
           />
           {errors.timeline && (
-            <p className="text-sm text-red-500">{errors.timeline.message}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.timeline.message}</p>
           )}
         </div>
 
-        {/* Source */}
-        <div className="space-y-2">
+        <div className="grid gap-1">
           <Label>Source</Label>
           <Controller
             name="source"
@@ -304,12 +301,11 @@ export default function NewBuyerPage() {
             )}
           />
           {errors.source && (
-            <p className="text-sm text-red-500">{errors.source.message}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.source.message}</p>
           )}
         </div>
 
-        {/* Status */}
-        <div className="space-y-2">
+        <div className="grid gap-1">
           <Label>Status</Label>
           <Controller
             name="status"
@@ -333,21 +329,19 @@ export default function NewBuyerPage() {
             )}
           />
           {errors.status && (
-            <p className="text-sm text-red-500">{errors.status.message}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.status.message}</p>
           )}
         </div>
 
-        {/* Notes */}
-        <div className="space-y-2">
+        <div className="grid gap-1">
           <Label htmlFor="notes">Notes</Label>
           <Textarea id="notes" {...register("notes")} />
           {errors.notes && (
-            <p className="text-sm text-red-500">{errors.notes.message}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.notes.message}</p>
           )}
         </div>
 
-        {/* Tags */}
-        <div className="space-y-2">
+        <div className="grid gap-1">
           <Label htmlFor="tags">Tags (comma separated)</Label>
           <Input
             id="tags"
@@ -359,12 +353,16 @@ export default function NewBuyerPage() {
             })}
           />
           {errors.tags && (
-            <p className="text-sm text-red-500">{errors.tags.message}</p>
+            <p className="mt-1 text-sm text-red-600">{errors.tags.message}</p>
           )}
         </div>
 
-        <Button type="submit" disabled={submitting}>
-          {submitting ? "Submitting..." : "Create Lead"}
+        <Button type="submit" disabled={isSubmitting} className="flex items-center justify-center gap-2">
+          {isSubmitting ? "Submitting..." : (
+            <>
+              <BadgePlus size={18} /> Create Lead
+            </>
+          )}
         </Button>
       </form>
     </div>

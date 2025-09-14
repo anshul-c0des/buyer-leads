@@ -5,6 +5,8 @@ import { supabase } from "@/lib/supabaseClient"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { toast } from "sonner"
+import { Loader2 } from "lucide-react"
 
 export default function LoginPage() {
   const router = useRouter()
@@ -18,7 +20,7 @@ export default function LoginPage() {
     setError(null)
 
     if (!email || !password) {
-      setError("Email and password are required")
+      toast.error("Email and password are required!")
       setLoading(false)
       return
     }
@@ -29,13 +31,13 @@ export default function LoginPage() {
     })
 
     if (error) {
-      setError(error.message)
+      toast.error(error.message)
       setLoading(false)
       return
     }
 
     if (!data.session) {
-      setError("Login succeeded but no active session found")
+      toast.error("Login succeeded but no active session found")
       setLoading(false)
       return
     }
@@ -53,14 +55,15 @@ export default function LoginPage() {
 
       if (!res.ok) {
         const errorData = await res.json()
-        setError(errorData.error || "Failed to sync user")
+        toast.error(errorData.error || "Failed to sync user")
         setLoading(false)
         return
       }
 
+      toast.success("Logged in successfully!")
       router.push("/buyers")
     } catch {
-      setError("Failed to sync user")
+      toast.error("Failed to sync user")
       setLoading(false)
     }
   }
@@ -93,7 +96,8 @@ export default function LoginPage() {
 
       {error && <p className="text-red-600 mb-4">{error}</p>}
 
-      <Button onClick={handleLogin} disabled={loading}>
+      <Button onClick={handleLogin} disabled={loading} className="cursor-pointer flex items-center justify-center gap-2">
+        {loading && <Loader2 className="animate-spin h-4 w-4" />}
         {loading ? "Logging in..." : "Login"}
       </Button>
 

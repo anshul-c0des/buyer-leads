@@ -1,18 +1,15 @@
-"use client"
+'use client'
 
 import { useState, useEffect, useTransition } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useDebounce } from "use-debounce"
 import { Input } from "@/components/ui/input"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Button } from "@/components/ui/button"
 import { supabase } from "@/lib/supabaseClient"
+import { HashLoader, PulseLoader } from "react-spinners"
+import { toast } from "sonner"
+import { ChevronLeftIcon, ChevronRightIcon, Eye, FolderDown, FolderUp, Pencil } from "lucide-react"
 
 type Filters = {
   city?: string
@@ -29,7 +26,6 @@ export default function BuyersPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Extract query params for filters
   const [filters, setFilters] = useState<Filters>({
     city: searchParams.get("city") ?? "",
     propertyType: searchParams.get("propertyType") ?? "",
@@ -39,7 +35,6 @@ export default function BuyersPage() {
     page: Number(searchParams.get("page") ?? "1"),
   })
 
-  // Debounce search to reduce API calls
   const [debouncedSearch] = useDebounce(filters.search, 500)
 
   const [buyersData, setBuyersData] = useState<{
@@ -49,66 +44,42 @@ export default function BuyersPage() {
     totalPages: number
   } | null>(null)
 
-  const [loading, setLoading] = useState<boolean>(false)
-
+  const [loading, setLoading] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [currentUser, setCurrentUser] = useState<{ id: string; role: string } | null>(null)
 
   useEffect(() => {
     async function fetchCurrentUser() {
-      const { data: { user }, error } = await supabase.auth.getUser();
-      if (error || !user) {
-        setCurrentUser(null);
-        return;
-      }
-  
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-  
-      if (!accessToken) {
-        console.error('No token found for current user');
-        setCurrentUser(null);
-        return;
-      }
-  
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return
+
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      if (!token) return
+
       const res = await fetch('/api/auth/me', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-  
-      if (!res.ok) {
-        console.error('Failed to fetch user data:', res.status);
-        setCurrentUser(null);
-        return;
-      }
-  
-      const data = await res.json();
-  
-      if (data?.id) {
-        setCurrentUser(data);
-      } else {
-        setCurrentUser(null);
-      }
+        headers: { Authorization: `Bearer ${token}` }
+      })
+
+      const data = await res.json()
+      setCurrentUser(data?.id ? data : null)
     }
-  
+
     fetchCurrentUser()
-  
+
     const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
       if (event === 'SIGNED_OUT') {
         setCurrentUser(null)
         router.refresh()
       }
     })
-  
+
     return () => {
       authListener?.subscription?.unsubscribe()
     }
   }, [router])
-  
-  
 
-  // Fetch buyers data whenever filters or debounced search changes
   useEffect(() => {
     async function fetchBuyers() {
       setLoading(true)
@@ -121,65 +92,54 @@ export default function BuyersPage() {
         if (debouncedSearch) params.append("search", debouncedSearch)
         params.append("page", String(filters.page ?? 1))
 
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
+        const { data: { session } } = await supabase.auth.getSession()
         const token = session?.access_token
 
         const headers: HeadersInit = {}
-        if (token) {
-          headers.Authorization = `Bearer ${token}`
-        }
+        if (token) headers.Authorization = `Bearer ${token}`
 
-        const res = await fetch(`/api/buyers?${params.toString()}`, {
-          headers,
-        })
+        const res = await fetch(`/api/buyers?${params.toString()}`, { headers })
 
         if (!res.ok) {
-          console.error("Failed to fetch buyers:", res.status, await res.text())
+          const errorText = await res.text()
+          toast.error(`Failed to fetch buyers: ${res.status} ${errorText}`)
           setBuyersData(null)
           return
         }
 
         const data = await res.json()
         setBuyersData(data)
-      } catch (error) {
-        console.error("Error fetching buyers:", error)
+      } catch {
+        toast.error("Error fetching buyers data. Please try again.")
         setBuyersData(null)
       } finally {
         setLoading(false)
       }
     }
+
     fetchBuyers()
   }, [filters.city, filters.propertyType, filters.status, filters.timeline, debouncedSearch, filters.page])
 
-  // Update URL and filters when user changes filter/search/page
   function updateFilters(updated: Partial<Filters>) {
-    const newFilters = { ...filters, ...updated, page: 1 } // reset page to 1 on filter change
+    const newFilters = { ...filters, ...updated, page: 1 }
 
-    // Convert 'all' to empty string to disable filter
     for (const key of ["city", "propertyType", "status", "timeline"] as const) {
-      if (newFilters[key] === "all") {
-        newFilters[key] = ""
-      }
+      if (newFilters[key] === "all") newFilters[key] = ""
     }
 
     setFilters(newFilters)
 
     const params = new URLSearchParams()
-    if (newFilters.city) params.append("city", newFilters.city)
-    if (newFilters.propertyType) params.append("propertyType", newFilters.propertyType)
-    if (newFilters.status) params.append("status", newFilters.status)
-    if (newFilters.timeline) params.append("timeline", newFilters.timeline)
-    if (newFilters.search) params.append("search", newFilters.search)
-    params.append("page", String(newFilters.page ?? 1))
+    for (const key in newFilters) {
+      const val = newFilters[key as keyof Filters]
+      if (val) params.append(key, String(val))
+    }
 
     startTransition(() => {
       router.replace(`/buyers?${params.toString()}`)
     })
   }
 
-  // Pagination controls
   function goToPage(newPage: number) {
     if (newPage < 1 || (buyersData && newPage > buyersData.totalPages)) return
     updateFilters({ page: newPage })
@@ -192,12 +152,26 @@ export default function BuyersPage() {
     Exploring: "Exploring",
   }
 
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-[70vh]">
+        <HashLoader />
+      </div>
+    )
+  }
+  
+
   return (
     <div className="max-w-6xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Buyer Base</h1>
+      <div className="mb-2">
+        <h1 className="text-3xl font-semibold">Leads</h1>
+        <p className="text-muted-foreground text-sm">
+          Manage your buyer leads with filters, search and actions.
+        </p>
+      </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-4 mb-6">
+      <div className="flex flex-wrap gap-4 items-end mt-6 mb-8">
         <Input
           placeholder="Search by name, phone, email"
           value={filters.search}
@@ -206,7 +180,7 @@ export default function BuyersPage() {
         />
 
         <Select value={filters.city} onValueChange={(val) => updateFilters({ city: val })}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="City" />
           </SelectTrigger>
           <SelectContent>
@@ -220,7 +194,7 @@ export default function BuyersPage() {
         </Select>
 
         <Select value={filters.propertyType} onValueChange={(val) => updateFilters({ propertyType: val })}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Property Type" />
           </SelectTrigger>
           <SelectContent>
@@ -234,7 +208,7 @@ export default function BuyersPage() {
         </Select>
 
         <Select value={filters.status} onValueChange={(val) => updateFilters({ status: val })}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
           <SelectContent>
@@ -250,7 +224,7 @@ export default function BuyersPage() {
         </Select>
 
         <Select value={filters.timeline} onValueChange={(val) => updateFilters({ timeline: val })}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-[160px]">
             <SelectValue placeholder="Timeline" />
           </SelectTrigger>
           <SelectContent>
@@ -262,88 +236,86 @@ export default function BuyersPage() {
           </SelectContent>
         </Select>
 
-        <Button onClick={() => router.push("/buyers/import")}>
-          Import CSV
-        </Button>
-        <Button onClick={() => router.push(`/buyers/export${window.location.search}`)}>
-          Export CSV
-        </Button>
+        <div className="flex gap-2 ml-auto">
+          <Button onClick={() => router.push("/buyers/import")}>
+            <FolderDown className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+          <Button onClick={() => router.push(`/buyers/export${window.location.search}`)}>
+            <FolderUp className="mr-2 h-4 w-4" />
+            Export
+          </Button>
+        </div>
       </div>
 
       {/* Table */}
-      <table className="w-full table-auto border-collapse border border-gray-300">
+      <div className="rounded-md border overflow-x-auto shadow-sm">
+      <table className="w-full table-auto border-collapse">
         <thead>
-          <tr>
-            <th className="border border-gray-300 p-2 text-left">Name</th>
-            <th className="border border-gray-300 p-2 text-left">Phone</th>
-            <th className="border border-gray-300 p-2 text-left">City</th>
-            <th className="border border-gray-300 p-2 text-left">Property Type</th>
-            <th className="border border-gray-300 p-2 text-left">BHK</th>
-            <th className="border border-gray-300 p-2 text-left">Budget (Min-Max)</th>
-            <th className="border border-gray-300 p-2 text-left">Timeline</th>
-            <th className="border border-gray-300 p-2 text-left">Status</th>
-            <th className="border border-gray-300 p-2 text-left">Updated At</th>
-            <th className="border border-gray-300 p-2 text-left">Actions</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? (
-            <tr>
-              <td colSpan={9} className="text-center p-4">
-                Loading buyers...
-              </td>
+          <tr className="bg-muted text-sm text-muted-foreground">
+              {["Name", "Phone", "City", "Property Type", "BHK", "Budget", "Timeline", "Status", "Updated", "Actions"].map((label, i) => (
+                <th key={i} className="p-2 border-r text-left">{label}</th>
+              ))}
             </tr>
-          ) : Array.isArray(buyersData?.buyers) && buyersData.buyers.length === 0 ? (
-            <tr>
-              <td colSpan={9} className="text-center p-4">
-                No buyers found.
-              </td>
-            </tr>
-          ) : (
-            buyersData?.buyers.map((buyer) => (
-              <tr key={buyer.id} className="hover:bg-gray-100 cursor-pointer">
-                <td className="border border-gray-300 p-2">{buyer.fullName}</td>
-                <td className="border border-gray-300 p-2">{buyer.phone}</td>
-                <td className="border border-gray-300 p-2">{buyer.city}</td>
-                <td className="border border-gray-300 p-2">{buyer.propertyType}</td>
-                <td className="border border-gray-300 p-2">
-                  {["Apartment", "Villa"].includes(buyer.propertyType ?? "") ? buyer.bhk ?? "-" : "-"}
-                </td>
-                <td className="border border-gray-300 p-2">
-                  {buyer.budgetMin ?? "-"} - {buyer.budgetMax ?? "-"}
-                </td>
-                <td className="border border-gray-300 p-2">{timelineLabels[buyer.timeline] ?? buyer.timeline}</td>
-                <td className="border border-gray-300 p-2">{buyer.status}</td>
-                <td className="border border-gray-300 p-2">{new Date(buyer.updatedAt).toLocaleString()}</td>
-                <td className="border border-gray-300 p-2 space-x-2">
-                  {(currentUser?.role === "ADMIN" || currentUser?.id === buyer.ownerId) && (
-                    <Button size="sm" onClick={() => router.push(`/buyers/${buyer.id}`)}>
-                      Edit
-                    </Button>
-                  )}
-                  <Button size="sm" onClick={() => router.push(`/buyers/${buyer.id}/view`)}>
-                    View
-                  </Button>
+          </thead>
+          <tbody>
+            {loading ? (
+              <tr>
+                <td colSpan={10} className="text-center py-6">
+                  <div className="flex justify-center">
+                    <PulseLoader />
+                  </div>
                 </td>
               </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+            ) : buyersData?.buyers?.length === 0 ? (
+              <tr>
+                <td colSpan={10} className="text-center py-6 text-muted-foreground">No buyers found.</td>
+              </tr>
+            ) : (
+              buyersData?.buyers.map((buyer) => (
+                <tr key={buyer.id} className="border-b border-muted hover:bg-muted/50">
+                  <td className="p-2 border-r border-muted">{buyer.fullName}</td>
+                  <td className="p-2 border-r border-muted">{buyer.phone}</td>
+                  <td className="p-2 border-r border-muted">{buyer.city}</td>
+                  <td className="p-2 border-r border-muted">{buyer.propertyType}</td>
+                  <td className="p-2 border-r border-muted">
+                    {["Apartment", "Villa"].includes(buyer.propertyType ?? "") ? buyer.bhk ?? "-" : "-"}
+                  </td>
+                  <td className="p-2 border-r border-muted">
+                    {buyer.budgetMin ?? "-"} - {buyer.budgetMax ?? "-"}
+                  </td>
+                  <td className="p-2 border-r border-muted">
+                    {timelineLabels[buyer.timeline] ?? buyer.timeline}
+                  </td>
+                  <td className="p-2 border-r border-muted">{buyer.status}</td>
+                  <td className="p-2 border-r border-muted">{new Date(buyer.updatedAt).toLocaleString()}</td>
+                  <td className="p-2 flex gap-1">
+                    {(currentUser?.role === "ADMIN" || currentUser?.id === buyer.ownerId) && (
+                      <Button variant="outline" size="sm" onClick={() => router.push(`/buyers/${buyer.id}`)}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
+                    )}
+                    <Button variant="outline" size="sm" onClick={() => router.push(`/buyers/${buyer.id}/view`)}>
+                      <Eye className="w-4 h-4" />
+                    </Button>
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
 
       {/* Pagination */}
-      <div className="flex justify-center items-center mt-4 gap-4">
-        <Button onClick={() => goToPage((filters.page ?? 1) - 1)} disabled={(filters.page ?? 1) <= 1 || isPending || loading}>
-          Previous
+      <div className="flex justify-center items-center mt-6 gap-4">
+        <Button onClick={() => goToPage((filters.page ?? 1) - 1)} disabled={(filters.page ?? 1) <= 1} size="icon" variant="secondary">
+          <ChevronLeftIcon />
         </Button>
-        <span>
+        <span className="text-sm text-muted-foreground">
           Page {filters.page} of {buyersData?.totalPages ?? 1}
         </span>
-        <Button
-          onClick={() => goToPage((filters.page ?? 1) + 1)}
-          disabled={(filters.page ?? 1) >= (buyersData?.totalPages ?? 1) || isPending || loading}
-        >
-          Next
+        <Button onClick={() => goToPage((filters.page ?? 1) + 1)} disabled={(filters.page ?? 1) >= (buyersData?.totalPages ?? 1)} size="icon" variant="secondary">
+          <ChevronRightIcon />
         </Button>
       </div>
     </div>

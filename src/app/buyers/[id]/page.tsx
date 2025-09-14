@@ -18,6 +18,9 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { supabase } from "@/lib/supabaseClient"
+import { toast } from "sonner"
+import { HashLoader } from "react-spinners"
+import { Save, Trash } from "lucide-react"
 
 type BuyerFormData = z.infer<typeof buyerSchema>
 
@@ -27,7 +30,6 @@ export default function EditBuyerPage() {
   const id = params.id as string
 
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
   const [deleting, setDeleting] = useState(false)
 
   const {
@@ -46,16 +48,17 @@ export default function EditBuyerPage() {
 
   useEffect(() => {
     async function checkAuthAndFetch() {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (!session) {
-        router.replace("/login")
-        return
-      }
-      const accessToken = session?.access_token
-
+      setLoading(true)
       try {
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+          router.replace("/login")
+          return
+        }
+
         const res = await fetch(`/api/buyers/${id}`)
         if (!res.ok) throw new Error("Failed to fetch buyer")
+
         const { buyer } = await res.json()
 
         const buyerData = {
@@ -66,7 +69,7 @@ export default function EditBuyerPage() {
 
         reset(buyerData)
       } catch (err: any) {
-        setError(err.message)
+        toast.error(err.message || "Failed to load buyer data")
       } finally {
         setLoading(false)
       }
@@ -94,9 +97,10 @@ export default function EditBuyerPage() {
         throw new Error(result.message || "Failed to update buyer")
       }
 
+      toast.success("Buyer updated successfully!")
       router.push("/buyers")
     } catch (err: any) {
-      setError(err.message)
+      toast.error(err.message || "Failed to save changes")
     }
   }
 
@@ -118,61 +122,113 @@ export default function EditBuyerPage() {
         throw new Error(result.message || "Delete failed")
       }
 
+      toast.success("Buyer deleted successfully!")
       router.push("/buyers")
     } catch (err: any) {
-      alert(err.message)
+      toast.error(err.message || "Failed to delete buyer")
     } finally {
       setDeleting(false)
     }
   }
 
-  if (loading) return <p>Loading...</p>
-  if (error) return <p className="text-red-500">{error}</p>
+  if (loading){
+    return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <HashLoader />
+      </div>
+    )
+  }
 
   return (
-    <div className="max-w-2xl mx-auto p-6">
-      <h1 className="text-2xl font-bold mb-6">Edit Buyer Lead</h1>
+    <div className="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow-md">
+      <h1 className="text-3xl font-extrabold mb-8 border-b pb-3">
+        Edit Buyer Lead
+      </h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        <div>
-          <Label>Full Name</Label>
-          <Input {...register("fullName")} />
-          {errors.fullName && <p className="text-sm text-red-500">{errors.fullName.message}</p>}
+        <div className="grid gap-1">
+          <Label htmlFor="fullName">Full Name</Label>
+          <Input id="fullName" {...register("fullName")} />
+          {errors.fullName && (
+            <p className="mt-1 text-sm text-red-600">{errors.fullName.message}</p>
+          )}
         </div>
 
-        <div>
-          <Label>Phone</Label>
-          <Input {...register("phone")} />
-          {errors.phone && <p className="text-sm text-red-500">{errors.phone.message}</p>}
+        <div className="grid gap-1">
+          <Label htmlFor="phone">Phone</Label>
+          <Input id="phone" {...register("phone")} />
+          {errors.phone && (
+            <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
+          )}
         </div>
 
-        <div>
-          <Label>Email</Label>
-          <Input {...register("email")} />
-          {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
+        <div className="grid gap-1">
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" {...register("email")} />
+          {errors.email && (
+            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
+          )}
         </div>
 
-        <div>
+        <div className="grid gap-1">
           <Label>City</Label>
-          <Input {...register("city")} />
-          {errors.city && <p className="text-sm text-red-500">{errors.city.message}</p>}
+          <Controller
+            name="city"
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a city" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Chandigarh">Chandigarh</SelectItem>
+                  <SelectItem value="Mohali">Mohali</SelectItem>
+                  <SelectItem value="Zirakpur">Zirakpur</SelectItem>
+                  <SelectItem value="Panchkula">Panchkula</SelectItem>
+                  <SelectItem value="Other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.city && (
+            <p className="text-sm text-red-500">{errors.city.message}</p>
+          )}
         </div>
 
-        <div>
+        <div className="grid gap-1">
           <Label>Property Type</Label>
-          <Input {...register("propertyType")} />
-          {errors.propertyType && <p className="text-sm text-red-500">{errors.propertyType.message}</p>}
+          <Controller
+            name="propertyType"
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Apartment">Apartment</SelectItem>
+                  <SelectItem value="Villa">Villa</SelectItem>
+                  <SelectItem value="Plot">Plot</SelectItem>
+                  <SelectItem value="Office">Office</SelectItem>
+                  <SelectItem value="Retail">Retail</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.propertyType && (
+            <p className="text-sm text-red-500">{errors.propertyType.message}</p>
+          )}
         </div>
 
         {["Apartment", "Villa"].includes(propertyType ?? "") && (
-          <div>
-            <Label>BHK</Label>
+          <div className="grid gap-1">
+            <Label htmlFor="bhk">BHK</Label>
             <Controller
               name="bhk"
               control={control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value ?? undefined}>
-                  <SelectTrigger>
+                  <SelectTrigger id="bhk">
                     <SelectValue placeholder="Select BHK" />
                   </SelectTrigger>
                   <SelectContent>
@@ -185,18 +241,20 @@ export default function EditBuyerPage() {
                 </Select>
               )}
             />
-            {errors.bhk && <p className="text-sm text-red-500">{errors.bhk.message}</p>}
+            {errors.bhk && (
+              <p className="mt-1 text-sm text-red-600">{errors.bhk.message}</p>
+            )}
           </div>
         )}
 
-        <div>
-          <Label>Purpose</Label>
+        <div className="grid gap-1">
+          <Label htmlFor="purpose">Purpose</Label>
           <Controller
             name="purpose"
             control={control}
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value || ""}>
-                <SelectTrigger>
+                <SelectTrigger id="purpose">
                   <SelectValue placeholder="Select purpose" />
                 </SelectTrigger>
                 <SelectContent>
@@ -206,52 +264,63 @@ export default function EditBuyerPage() {
               </Select>
             )}
           />
-          {errors.purpose && <p className="text-sm text-red-500">{errors.purpose.message}</p>}
+          {errors.purpose && (
+            <p className="mt-1 text-sm text-red-600">{errors.purpose.message}</p>
+          )}
         </div>
 
-        <div>
-          <Label>Minimum Budget</Label>
+        <div className="grid gap-1">
+          <Label htmlFor="budgetMin">Minimum Budget</Label>
           <Input
+            id="budgetMin"
             type="number"
             {...register("budgetMin", {
               setValueAs: (v) => (v === "" ? null : Number(v)),
             })}
           />
-          {errors.budgetMin && <p className="text-sm text-red-500">{errors.budgetMin.message}</p>}
+          {errors.budgetMin && (
+            <p className="mt-1 text-sm text-red-600">{errors.budgetMin.message}</p>
+          )}
         </div>
 
-        <div>
-          <Label>Maximum Budget</Label>
+        <div className="grid gap-1">
+          <Label htmlFor="budgetMax">Maximum Budget</Label>
           <Input
+            id="budgetMax"
             type="number"
             {...register("budgetMax", {
               setValueAs: (v) => (v === "" ? null : Number(v)),
             })}
           />
-          {errors.budgetMax && <p className="text-sm text-red-500">{errors.budgetMax.message}</p>}
+          {errors.budgetMax && (
+            <p className="mt-1 text-sm text-red-600">{errors.budgetMax.message}</p>
+          )}
         </div>
 
-        <div>
-          <Label>Tags (comma separated)</Label>
-          <Input {...register("tags")} placeholder="e.g. NRI,Investor" />
+        <div className="grid gap-1">
+          <Label htmlFor="tags">Tags (comma separated)</Label>
+          <Input id="tags" {...register("tags")} placeholder="e.g. NRI,Investor" />
         </div>
 
-        <div>
-          <Label>Notes</Label>
-          <Textarea {...register("notes")} />
+        <div className="grid gap-1">
+          <Label htmlFor="notes">Notes</Label>
+          <Textarea id="notes" {...register("notes")} />
         </div>
 
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? "Saving..." : "Save Changes"}
-        </Button>
-        <Button
-          type="button"
-          variant="destructive"
-          onClick={handleDelete}
-          disabled={deleting}
-        >
-          {deleting ? "Deleting..." : "Delete"}
-        </Button>
+        <div className="flex gap-4 mt-6">
+          <Button type="submit" disabled={isSubmitting} className="cursor-pointer">
+            <Save /> {isSubmitting ? "Saving..." : "Save Lead"}
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="cursor-pointer"
+          >
+            <Trash/> {deleting ? "Deleting..." : "Delete Lead"}
+          </Button>
+        </div>
       </form>
     </div>
   )
