@@ -21,6 +21,24 @@ export default function ImportPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
 
+  function normalizeBhk(rawBhk: unknown): string | undefined {
+    if (typeof rawBhk !== 'string') return undefined
+    const trimmed = rawBhk.trim()
+    if (trimmed === '' || trimmed === '-') return undefined
+    const mapping: Record<string, string> = {
+      'Studio': 'Studio',
+      '1': 'One',
+      '2': 'Two', 
+      '3': 'Three',
+      '4': 'Four',
+      'One': '1',
+      'Two': '2',
+      'Three': '3',
+      'Four': '4',
+    }
+    return mapping[trimmed] ?? undefined
+  }
+
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -38,10 +56,20 @@ export default function ImportPage() {
         const errList: ValidationError[] = []
 
         rows.slice(0, 200).forEach((row, index) => {
+          let normalizedBhk = normalizeBhk(row.bhk)
+        
+          if (row.propertyType !== 'Apartment' && row.propertyType !== 'Villa') {
+            normalizedBhk = undefined
+          }
+        
+          row.bhk = normalizedBhk
+          console.log(`Row ${index + 2} after normalizeBhk:`, row.bhk)
+        
           const result = buyerSchema.safeParse(row)
           if (!result.success) {
+            console.log('Validation errors:', result.error.errors)
             errList.push({
-              row: index + 2, // +2 for header and 0-based index
+              row: index + 2,
               message: result.error.errors
                 .map(e => `${e.path.join('.')}: ${e.message}`)
                 .join(', '),
@@ -49,7 +77,7 @@ export default function ImportPage() {
           } else {
             validRows.push(result.data)
           }
-        })
+        })      
 
         setParsedRows(validRows)
         setErrors(errList)

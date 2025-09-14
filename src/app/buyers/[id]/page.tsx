@@ -9,8 +9,16 @@ import { buyerSchema } from "@/lib/zod/buyerSchema"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { supabase } from "@/lib/supabaseClient"
+import { headers } from "next/headers"
 
 type BuyerFormData = z.infer<typeof buyerSchema>
 
@@ -35,28 +43,28 @@ export default function EditBuyerPage() {
     defaultValues: {},
   })
 
-  const bhkReverseMap: Record<string, string> = {
-    Studio: "Studio",
-    One: "1",
-    Two: "2",
-    Three: "3",
-    Four: "4",
-  }
-  
+  const propertyType = watch("propertyType")
+
   useEffect(() => {
-    if (!id) return
-    async function fetchBuyer() {
-      setLoading(true)
+    async function checkAuthAndFetch() {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        router.replace("/login")
+        return
+      }
+      const accessToken = session?.access_token
+
       try {
         const res = await fetch(`/api/buyers/${id}`)
         if (!res.ok) throw new Error("Failed to fetch buyer")
-        const data = await res.json()
-  
+        const { buyer } = await res.json()
+
         const buyerData = {
-          ...data.buyer,
-          bhk: data.buyer.bhk ? bhkReverseMap[data.buyer.bhk] ?? "" : "",
+          ...buyer,
+          bhk: buyer.bhk ?? "",
+          tags: buyer.tags?.join(", ") ?? "",
         }
-  
+
         reset(buyerData)
       } catch (err: any) {
         setError(err.message)
@@ -64,9 +72,9 @@ export default function EditBuyerPage() {
         setLoading(false)
       }
     }
-    fetchBuyer()
-  }, [id, reset])
-  
+
+    checkAuthAndFetch()
+  }, [id, reset, router])
 
   const onSubmit = async (data: BuyerFormData) => {
     try {
@@ -93,7 +101,7 @@ export default function EditBuyerPage() {
     }
   }
 
-  async function handleDelete() {
+  const handleDelete = async () => {
     if (!confirm("Are you sure you want to delete this buyer?")) return
 
     setDeleting(true)
@@ -106,9 +114,9 @@ export default function EditBuyerPage() {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
 
-      const data = await res.json()
-      if (!res.ok || !data.success) {
-        throw new Error(data.message || "Delete failed")
+      const result = await res.json()
+      if (!res.ok || !result.success) {
+        throw new Error(result.message || "Delete failed")
       }
 
       router.push("/buyers")
@@ -127,43 +135,37 @@ export default function EditBuyerPage() {
       <h1 className="text-2xl font-bold mb-6">Edit Buyer Lead</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
-        {/* Full Name */}
         <div>
           <Label>Full Name</Label>
           <Input {...register("fullName")} />
           {errors.fullName && <p className="text-sm text-red-500">{errors.fullName.message}</p>}
         </div>
 
-        {/* Phone */}
         <div>
           <Label>Phone</Label>
           <Input {...register("phone")} />
           {errors.phone && <p className="text-sm text-red-500">{errors.phone.message}</p>}
         </div>
 
-        {/* Email */}
         <div>
           <Label>Email</Label>
           <Input {...register("email")} />
           {errors.email && <p className="text-sm text-red-500">{errors.email.message}</p>}
         </div>
 
-        {/* City */}
         <div>
           <Label>City</Label>
           <Input {...register("city")} />
           {errors.city && <p className="text-sm text-red-500">{errors.city.message}</p>}
         </div>
 
-        {/* Property Type */}
         <div>
           <Label>Property Type</Label>
           <Input {...register("propertyType")} />
           {errors.propertyType && <p className="text-sm text-red-500">{errors.propertyType.message}</p>}
         </div>
 
-        {/* BHK */}
-        {["Apartment", "Villa"].includes(watch("propertyType") ?? "") && (
+        {["Apartment", "Villa"].includes(propertyType ?? "") && (
           <div>
             <Label>BHK</Label>
             <Controller
@@ -184,14 +186,30 @@ export default function EditBuyerPage() {
                 </Select>
               )}
             />
-            {errors.bhk && (
-              <p className="text-sm text-red-500">{errors.bhk.message}</p>
-            )}
+            {errors.bhk && <p className="text-sm text-red-500">{errors.bhk.message}</p>}
           </div>
         )}
 
+        <div>
+          <Label>Purpose</Label>
+          <Controller
+            name="purpose"
+            control={control}
+            render={({ field }) => (
+              <Select onValueChange={field.onChange} value={field.value || ""}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select purpose" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Buy">Buy</SelectItem>
+                  <SelectItem value="Rent">Rent</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          />
+          {errors.purpose && <p className="text-sm text-red-500">{errors.purpose.message}</p>}
+        </div>
 
-        {/* Budget Min */}
         <div>
           <Label>Minimum Budget</Label>
           <Input
@@ -203,7 +221,6 @@ export default function EditBuyerPage() {
           {errors.budgetMin && <p className="text-sm text-red-500">{errors.budgetMin.message}</p>}
         </div>
 
-        {/* Budget Max */}
         <div>
           <Label>Maximum Budget</Label>
           <Input
@@ -215,95 +232,27 @@ export default function EditBuyerPage() {
           {errors.budgetMax && <p className="text-sm text-red-500">{errors.budgetMax.message}</p>}
         </div>
 
-        {/* Timeline */}
         <div>
-          <Label>Timeline</Label>
-          <Controller
-            name="timeline"
-            control={control}
-            render={({ field }) => (
-              <Select onValueChange={field.onChange} value={field.value || ""}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select timeline" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ZeroToThreeMonths">0-3 Months</SelectItem>
-                  <SelectItem value="ThreeToSixMonths">3-6 Months</SelectItem>
-                  <SelectItem value="MoreThanSixMonths">6+ Months</SelectItem>
-                  <SelectItem value="Exploring">Exploring</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {errors.timeline && <p className="text-sm text-red-500">{errors.timeline.message}</p>}
+          <Label>Tags (comma separated)</Label>
+          <Input {...register("tags")} placeholder="e.g. NRI,Investor" />
         </div>
 
-        {/* Status */}
         <div>
-          <Label>Status</Label>
-          <Controller
-            name="status"
-            control={control}
-            render={({ field }) => (
-              <Select onValueChange={field.onChange} value={field.value || ""}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="New">New</SelectItem>
-                  <SelectItem value="Qualified">Qualified</SelectItem>
-                  <SelectItem value="Contacted">Contacted</SelectItem>
-                  <SelectItem value="Visited">Visited</SelectItem>
-                  <SelectItem value="Negotiation">Negotiation</SelectItem>
-                  <SelectItem value="Converted">Converted</SelectItem>
-                  <SelectItem value="Dropped">Dropped</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {errors.status && <p className="text-sm text-red-500">{errors.status.message}</p>}
+          <Label>Notes</Label>
+          <Textarea {...register("notes")} />
         </div>
 
-        {/* Source */}
-        <div>
-          <Label>Source</Label>
-          <Controller
-            name="source"
-            control={control}
-            render={({ field }) => (
-              <Select onValueChange={field.onChange} value={field.value || ""}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select source" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Website">Website</SelectItem>
-                  <SelectItem value="Referral">Referral</SelectItem>
-                  <SelectItem value="WalkIn">Walk-in</SelectItem>
-                  <SelectItem value="Call">Call</SelectItem>
-                  <SelectItem value="Other">Other</SelectItem>
-                </SelectContent>
-              </Select>
-            )}
-          />
-          {errors.source && <p className="text-sm text-red-500">{errors.source.message}</p>}
-        </div>
-
-        {/* Buttons */}
-        <div className="flex gap-4">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? "Saving..." : "Save Changes"}
-          </Button>
-          <Button
-            type="button"
-            variant="destructive"
-            disabled={deleting}
-            onClick={handleDelete}
-          >
-            {deleting ? "Deleting..." : "Delete Buyer"}
-          </Button>
-        </div>
-
-        {error && <p className="text-red-600 mt-4">{error}</p>}
+        <Button type="submit" disabled={isSubmitting}>
+          {isSubmitting ? "Saving..." : "Save Changes"}
+        </Button>
+        <Button
+          type="button"
+          variant="destructive"
+          onClick={handleDelete}
+          disabled={deleting}
+        >
+          {deleting ? "Deleting..." : "Delete"}
+        </Button>
       </form>
     </div>
   )
