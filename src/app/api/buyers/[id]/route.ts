@@ -7,11 +7,12 @@ import { checkRateLimit } from '@/lib/rateLimiter'
 
 export async function GET(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  context: { params: { id: string } }
 ) {
+  const {id} = context.params 
   try {
     const buyer = await prisma.buyer.findUnique({
-      where: { id: await params.id },
+      where: { id },
     })
 
     if (!buyer) {
@@ -19,7 +20,7 @@ export async function GET(
     }
 
     return NextResponse.json({ success: true, buyer })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(error)
     return NextResponse.json({ success: false, message: 'Server error' }, { status: 500 })
   }
