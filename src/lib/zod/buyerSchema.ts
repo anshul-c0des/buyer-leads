@@ -66,4 +66,4 @@ export const buyerSchema = z.object({
 }, {
   message: 'BHK is required for Apartment or Villa',
   path: ['bhk'],
-})  
+})    

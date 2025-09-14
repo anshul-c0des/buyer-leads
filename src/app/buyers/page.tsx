@@ -136,7 +136,8 @@ export default function BuyersPage() {
     }
 
     startTransition(() => {
-      router.replace(`/buyers?${params.toString()}`)
+      const newUrl = `/buyers?${params.toString()}`
+      window.history.replaceState(null, '', newUrl)
     })
   }
 

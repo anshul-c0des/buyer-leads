@@ -4,6 +4,7 @@ import { buyerSchema } from '@/lib/zod/buyerSchema'
 import { ZodError } from 'zod'
 import { mapBhkToPrisma, mapSourceToPrisma, mapTimelineToPrisma } from '@/lib/bhkMapping'
 import { createClient } from '@supabase/supabase-js'
+import { checkRateLimit } from '@/lib/rateLimiter'
 
 const PAGE_SIZE = 10
 
@@ -124,6 +125,17 @@ export async function POST(req: Request) {
       return NextResponse.json(
         { success: false, message: 'User not found in DB' },
         { status: 404 }
+      )
+    }
+
+    const rateResult = checkRateLimit(dbUser.id, 10, 60 * 1000) // 10 requests per 60s
+    if (!rateResult.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Rate limit exceeded. Try again in ${rateResult.retryAfter}s.`,
+        },
+        { status: 429 }
       )
     }
 

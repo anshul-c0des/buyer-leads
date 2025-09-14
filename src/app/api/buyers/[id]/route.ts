@@ -3,6 +3,7 @@ import { prisma } from '@/lib/prisma'
 import { buyerSchema } from '@/lib/zod/buyerSchema'
 import { mapBhkToPrisma, mapTimelineToPrisma, mapSourceToPrisma } from '@/lib/bhkMapping'
 import { getAuthenticatedUser } from '@/lib/auth'
+import { checkRateLimit } from '@/lib/rateLimiter'
 
 export async function GET(
   req: NextRequest,
@@ -67,6 +68,17 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
     const user = await getAuthenticatedUser(req)
     if (!user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+    }
+
+    const rateResult = checkRateLimit(user.id, 10, 60 * 1000)
+    if (!rateResult.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Rate limit exceeded. Try again in ${rateResult.retryAfter}s.`,
+        },
+        { status: 429 }
+      )
     }
 
     const id = params.id
