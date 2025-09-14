@@ -28,7 +28,6 @@ export async function GET(
   }
 }
 
-
 export async function POST(req: NextRequest) {
   console.log("POST /api/buyers received:", req)
   try {
@@ -64,11 +63,11 @@ export async function POST(req: NextRequest) {
     )
   }
 }
- 
 
 export async function PUT(
   req: NextRequest,
-  context: { params: Promise<{ id: string }>}) {
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const user = await getAuthenticatedUser(req);
     if (!user) {
@@ -144,22 +143,23 @@ export async function PUT(
   }
 }
 
-
-export async function DELETE(req: Request, { params }: { params: { id: string } }) {
+export async function DELETE(
+  req: NextRequest,
+  context: { params: Promise<{ id: string }> }
+) {
   try {
     const user = await getAuthenticatedUser(req)
     if (!user) {
       return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
     }
 
-    const id = params.id
+    const { id } = await context.params
 
     const existing = await prisma.buyer.findUnique({ where: { id } })
     if (!existing) {
       return NextResponse.json({ success: false, message: 'Buyer not found' }, { status: 404 })
     }
 
-    // Authorization: allow only owner or admin
     if (existing.ownerId !== user.id && user.role !== 'ADMIN') {
       return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
     }
