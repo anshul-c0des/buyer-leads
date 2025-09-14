@@ -84,7 +84,7 @@ export default function BuyersPage() {
       }
   
       const data = await res.json();
-
+  
       if (data?.id) {
         setCurrentUser(data);
       } else {
@@ -92,8 +92,20 @@ export default function BuyersPage() {
       }
     }
   
-    fetchCurrentUser();
-  }, []);
+    fetchCurrentUser()
+  
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') {
+        setCurrentUser(null)
+        router.refresh()
+      }
+    })
+  
+    return () => {
+      authListener?.subscription?.unsubscribe()
+    }
+  }, [router])
+  
   
 
   // Fetch buyers data whenever filters or debounced search changes

@@ -19,15 +19,27 @@ export default function Dashboard() {
         return
       }
   
-      const user = session.user
+      const accessToken = session.access_token
   
-      setUserDetails({
-        name: user.user_metadata?.name || "No Name",
-        email: user.email || "No Email",
-        phone: user.user_metadata?.phone || "No Phone",
+      const userRes = await fetch("/api/auth/me", {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       })
   
-      const accessToken = session.access_token
+      if (!userRes.ok) {
+        console.warn("Failed to fetch user details")
+        setLoading(false)
+        return
+      }
+  
+      const userInfo = await userRes.json()
+  
+      setUserDetails({
+        name: userInfo.name || "No Name", 
+        email: userInfo.email || "No Email",
+        phone: userInfo.phone || "No Phone",
+      })
   
       const res = await fetch("/api/my-leads", {
         headers: {
@@ -41,7 +53,7 @@ export default function Dashboard() {
     }
   
     fetchUserAndBuyers()
-  }, [])
+  }, [])  
   
 
   if (loading) return <div className="p-6">Loading your dashboard...</div>
@@ -60,7 +72,7 @@ export default function Dashboard() {
         <ul className="space-y-2">
           {buyers.map((buyer: any) => (
             <li key={buyer.id} className="border p-3 rounded">
-              <div><strong>Name:</strong> {buyer.fullName}</div>
+              <div><strong>Name:</strong> {buyer.name}</div>
               <div><strong>Phone:</strong> {buyer.phone}</div>
               <div><strong>City:</strong> {buyer.city}</div>
             </li>

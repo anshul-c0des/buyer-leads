@@ -30,12 +30,19 @@ export async function GET(req: Request) {
 
   const dbUser = await prisma.user.findUnique({
     where: { supabaseId: user.id },
+    select: {
+      id: true,
+      email: true,
+      role: true,
+      name: true,
+      phone: true,
+    }
   })
 
   if (!dbUser) {
     return NextResponse.json({ error: 'User not found' }, { status: 404 })
   }
 
-  const { id, role, email, name } = dbUser
-  return NextResponse.json({ id, role, email, name })
+  const { id, role, email, name, phone } = dbUser
+  return NextResponse.json({ id, role, email, name, phone })
 }

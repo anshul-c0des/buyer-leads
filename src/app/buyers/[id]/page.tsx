@@ -18,7 +18,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { supabase } from "@/lib/supabaseClient"
-import { headers } from "next/headers"
 
 type BuyerFormData = z.infer<typeof buyerSchema>
 
@@ -178,10 +177,10 @@ export default function EditBuyerPage() {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="Studio">Studio</SelectItem>
-                    <SelectItem value="1">1</SelectItem>
-                    <SelectItem value="2">2</SelectItem>
-                    <SelectItem value="3">3</SelectItem>
-                    <SelectItem value="4">4</SelectItem>
+                    <SelectItem value="One">1</SelectItem>
+                    <SelectItem value="Two">2</SelectItem>
+                    <SelectItem value="Three">3</SelectItem>
+                    <SelectItem value="Four">4</SelectItem>
                   </SelectContent>
                 </Select>
               )}
