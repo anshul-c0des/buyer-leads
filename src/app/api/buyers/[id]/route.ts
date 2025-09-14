@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
         timeline,
         source,
         ownerId: user.id,
-        tags: Array.isArray(data.tags) ? data.tags : [],
+        tags: Array.isArray(data.tags) ? data.tags.map(tag => tag.value) : [],
       },
     })
 
@@ -108,7 +108,7 @@ export async function PUT(req: Request, { params }: { params: { id: string } }) 
         bhk: bhk ?? null,
         timeline: mapTimelineToPrisma(data.timeline),
         source: mapSourceToPrisma(data.source),
-        tags: data.tags ? Array.isArray(data.tags) ? data.tags : [data.tags] : [],
+        tags: Array.isArray(data.tags) ? data.tags.map(tag => tag.value) : [],
       },
     })
 

@@ -43,7 +43,7 @@ export const buyerSchema = z.object({
     ])
     .default('New'),
   notes: z.string().max(1000, 'Notes must be 1000 characters or less').optional(),
-  tags: z.union([z.string(), z.array(z.string())]).optional(),
+  tags: z.array(z.object({ value: z.string() })).default([])
 })
 .refine((data) => {
   if (

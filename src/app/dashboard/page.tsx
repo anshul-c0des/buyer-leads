@@ -66,6 +66,8 @@ export default function Dashboard() {
   
       const data = await res.json()
       setBuyers(data.buyers || [])
+      console.log(data.buyers);
+      
     } catch (error) {
       toast.error("Something went wrong. Please try again.")
       setBuyers([])
@@ -86,24 +88,24 @@ export default function Dashboard() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[60vh]">
-       <HashLoader   />
+       <HashLoader color="#2563eb" />
       </div>
     )
   }
 
   return (
-    <>
-      <div className="max-w-5xl mx-auto p-6 space-y-6">
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-5xl mx-auto p-6 space-y-6 bg-white rounded-md shadow-xs" >
         {/* Header */}
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">Welcome, {userDetails?.name} 👋</h1>
-            <div className="mt-1 text-gray-600 space-y-1">
+            <h1 className="text-3xl font-extrabold tracking-tight">Welcome, <span className="text-blue-400">{userDetails?.name}</span> 👋</h1>
+            <div className="mt-1 text-gray-700 space-y-1 font-medium">
               <p>📧 <a href={`mailto:${userDetails?.email}`} className="hover:underline">{userDetails?.email}</a></p>
               <p>📞 {userDetails?.phone}</p>
             </div>
           </div>
-          <Button className="cursor-pointer" onClick={handleRefresh} >
+          <Button className="text-blue-500 bg-transparent border-2  bold cursor-pointer hover:text-white border-blue-500 hover:bg-blue-400" onClick={handleRefresh} >
             {refreshing && <Loader2 className="animate-spin h-4 w-4" />}
             {refreshing ? "Refreshing..." : "Refresh Leads"}
           </Button>
@@ -111,7 +113,7 @@ export default function Dashboard() {
 
         {/* Leads Section */}
         <section>
-          <h2 className="text-2xl font-semibold mb-4">Your Leads</h2>
+          <h2 className="text-2xl font-semibold mb-4 text-blue-400">Your Leads</h2>
 
           {buyers.length === 0 ? (
             <p className="text-gray-500">You currently have no buyers. Start adding some leads!</p>
@@ -122,9 +124,11 @@ export default function Dashboard() {
                   key={buyer.id}
                   className="border rounded-lg p-4 shadow-sm hover:shadow-md transition bg-white flex flex-col justify-between"
                 >
-                  <div className="mb-4">
-                    <h3 className="text-lg font-semibold mb-1">{buyer.name}</h3>
+                  <div className="grid grid-cols-2 gap-1 mb-3">
+                    <p><strong>Name:</strong> {buyer.fullName}</p>
                     <p><strong>Phone:</strong> {buyer.phone}</p>
+                    <p><strong>Property type:</strong> {buyer.propertyType}</p>
+                    <p><strong>Purpose:</strong> {buyer.purpose}</p>
                     <p><strong>City:</strong> {buyer.city}</p>
                   </div>
 
@@ -134,7 +138,7 @@ export default function Dashboard() {
                       <Button
                         variant="outline"
                         size="sm"
-                        className="cursor-pointer"
+                        className="hover:text-blue-400 border hover:border-blue-400 cursor-pointer"
                         onClick={() => router.push(`/buyers/${buyer.id}`)}
                         aria-label={`Edit lead ${buyer.name}`}
                       >
@@ -146,7 +150,7 @@ export default function Dashboard() {
                     <Button
                       variant="outline"
                       size="sm"
-                      className="cursor-pointer"
+                      className="hover:text-blue-400 border hover:border-blue-400 cursor-pointer"
                       onClick={() => router.push(`/buyers/${buyer.id}/view`)}
                       aria-label={`View lead ${buyer.name}`}
                     >
@@ -159,6 +163,6 @@ export default function Dashboard() {
           )}
         </section>
       </div>
-    </>
+    </div>
   )
 }

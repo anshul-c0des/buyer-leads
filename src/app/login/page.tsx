@@ -69,8 +69,9 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto p-6">
-      <h1 className="text-2xl mb-6">Login</h1>
+    <div className="min-h-screen bg-gray-50">
+    <div className="max-w-md mx-auto p-6 bg-white rounded-md shadow-xs">
+      <h1 className="text-3xl mb-6 text-blue-400 font-semibold">Login</h1>
 
       <div className="mb-4">
         <label htmlFor="email" className="block mb-1">Email</label>
@@ -96,7 +97,7 @@ export default function LoginPage() {
 
       {error && <p className="text-red-600 mb-4">{error}</p>}
 
-      <Button onClick={handleLogin} disabled={loading} className="cursor-pointer flex items-center justify-center gap-2">
+      <Button onClick={handleLogin} disabled={loading} className="cursor-pointer flex items-center justify-center gap-2 hover:bg-transparent border-2 border-blue-400 hover:text-blue-400 bg-blue-400 font-semibold">
         {loading && <Loader2 className="animate-spin h-4 w-4" />}
         {loading ? "Logging in..." : "Login"}
       </Button>
@@ -113,7 +114,7 @@ export default function LoginPage() {
           </Button>
         </p>
       </div>
-
+    </div>
     </div>
   )
 }

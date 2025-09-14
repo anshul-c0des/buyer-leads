@@ -1,10 +1,10 @@
 "use client"
 
-import { useForm, Controller } from "react-hook-form"
+import { useForm, Controller, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { buyerSchema } from "@/lib/zod/buyerSchema"
 import { z } from "zod"
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
@@ -20,7 +20,7 @@ import {
 import { supabase } from "@/lib/supabaseClient"
 import { toast } from "sonner"
 import { HashLoader } from "react-spinners"
-import { BadgePlus, Save } from "lucide-react"
+import { BadgePlus, X } from "lucide-react" 
 
 type FormData = z.infer<typeof buyerSchema>
 
@@ -28,6 +28,10 @@ export default function NewBuyerPage() {
   const router = useRouter()
   const [loading, setLoading] = useState(true)
 
+  const predefinedTags = ["Investor", "NRI", "Luxury", "Urgent", "Budget", "First-time"]
+
+  const tagInputRef = useRef<HTMLInputElement | null>(null)
+  
   const {
     register,
     control,
@@ -37,8 +41,23 @@ export default function NewBuyerPage() {
     formState: { errors, isSubmitting },
   } = useForm<FormData>({
     resolver: zodResolver(buyerSchema),
+    defaultValues: {tags: []}
+  })
+  
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "tags"
   })
 
+  const addTag = (tag: string) => {
+    const cleanTag = tag.trim()
+    if (!cleanTag) return
+    const existing = watch("tags") || []
+    const existingValues = existing.map((t) => t.value)
+    if (existingValues.includes(cleanTag)) return
+    append({value:cleanTag})
+  }
+  
   useEffect(() => {
     async function checkAuth() {
       try {
@@ -68,13 +87,18 @@ export default function NewBuyerPage() {
       } = await supabase.auth.getSession()
       const accessToken = session?.access_token
 
+      const transformedData = {
+        ...data,
+        tags: data.tags?.map((tagObj) => tagObj.value) || [],
+      }
+
       const res = await fetch("/api/buyers", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(transformedData),
       })
 
       const result = await res.json()
@@ -341,19 +365,68 @@ export default function NewBuyerPage() {
           )}
         </div>
 
+        {/* Tags Field */}
         <div className="grid gap-1">
-          <Label htmlFor="tags">Tags (comma separated)</Label>
-          <Input
-            id="tags"
-            {...register("tags", {
-              setValueAs: (v) =>
-                typeof v === "string"
-                  ? v.split(",").map((tag) => tag.trim()).filter(Boolean)
-                  : [],
+          <Label htmlFor="tags">Tags</Label>
+
+          {/* Display tags */}
+          <div className="flex flex-wrap gap-2 mb-2">
+            {fields.map((field, index) => {
+              // watch tags to get actual string value for each field
+              const tag = field.value ?? ""
+              return (
+                <div
+                  key={field.id}
+                  className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full text-sm"
+                >
+                  {tag}
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    className="text-muted-foreground hover:text-destructive"
+                    aria-label={`Remove tag ${tag}`}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              )
             })}
+          </div>
+
+          {/* Input to add tags */}
+          <Input
+            ref={tagInputRef}
+            id="tags"
+            placeholder="Type and press enter"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                const inputValue = e.currentTarget.value
+                addTag(inputValue)
+                e.currentTarget.value = ""
+              }
+            }}
           />
+
+          {/* Predefined tags */}
+          <div className="mt-1 flex flex-wrap gap-2 text-sm text-muted-foreground">
+            {predefinedTags.map((tag) => (
+              <Button
+                key={tag}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addTag(tag)}
+              >
+                {tag}
+              </Button>
+            ))}
+          </div>
+
           {errors.tags && (
-            <p className="mt-1 text-sm text-red-600">{errors.tags.message}</p>
+            <p className="text-sm text-red-600" role="status" aria-live="polite">
+              {errors.tags.message}
+            </p>
           )}
         </div>
 

@@ -1,12 +1,13 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Papa from 'papaparse'
 import { buyerSchema } from '@/lib/zod/buyerSchema'
 import { createClient } from '@supabase/supabase-js'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useRouter } from 'next/navigation'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -19,9 +20,21 @@ type ValidationError = {
 }
 
 export default function ImportPage() {
+  const router = useRouter()
   const [parsedRows, setParsedRows] = useState<any[]>([])
   const [errors, setErrors] = useState<ValidationError[]>([])
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    async function checkAuth(){
+      const {data: {session}} = await supabase.auth.getSession()
+      if(!session){
+        toast.error('You must be logged in to import files')
+        router.push('/login')
+      }
+    }
+    checkAuth()
+  }, [router])
 
   function normalizeBhk(rawBhk: unknown): string | undefined {
     if (typeof rawBhk !== 'string') return undefined
@@ -132,14 +145,16 @@ export default function ImportPage() {
   }
 
   return (
-    <div className="p-6 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Import CSV file..</h1>
+    <div className="min-h-screen bg-gray-50">
+    <div className="p-6 max-w-4xl mx-auto bg-white rounded-md shadow-xs">
+      <h1 className="text-3xl font-bold mb-6 text-blue-400">Import CSV file..</h1>
 
       <div className="mb-4 ">
         <Input
           type="file"
           accept=".csv"
           onChange={handleFile}
+          className='bg-blue-50 hover:bg-blue-100'
         />
       </div>
 
@@ -188,6 +203,7 @@ export default function ImportPage() {
           </Button>
         </div>
       )}
+    </div>
     </div>
   )
 }

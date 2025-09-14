@@ -10,6 +10,7 @@ import { supabase } from "@/lib/supabaseClient"
 import { HashLoader, PulseLoader } from "react-spinners"
 import { toast } from "sonner"
 import { ChevronLeftIcon, ChevronRightIcon, Eye, FolderDown, FolderUp, Pencil } from "lucide-react"
+import { ErrorBoundary } from "@/components/ErrorBoundary"
 
 type Filters = {
   city?: string
@@ -156,16 +157,18 @@ export default function BuyersPage() {
   if (loading) {
     return (
       <div className="flex justify-center items-center h-[70vh]">
-        <HashLoader />
+        <HashLoader color="#2563eb" />
       </div>
     )
   }
   
 
   return (
+    <ErrorBoundary>
+      <div className=" bg-gray-50 min-h-screen">
     <div className="max-w-6xl mx-auto p-6">
       <div className="mb-2">
-        <h1 className="text-3xl font-semibold">Leads</h1>
+        <h1 className="text-4xl font-semibold text-blue-400">Leads</h1>
         <p className="text-muted-foreground text-sm">
           Manage your buyer leads with filters, search and actions.
         </p>
@@ -238,12 +241,12 @@ export default function BuyersPage() {
         </Select>
 
         <div className="flex gap-2 ml-auto">
-          <Button onClick={() => router.push("/buyers/import")}>
-            <FolderDown className="mr-2 h-4 w-4" />
+          <Button onClick={() => router.push("/buyers/import")} className="cursor-pointer flex items-center justify-center gap-2 hover:bg-transparent border-2 border-blue-400 hover:text-blue-400 bg-blue-400 font-semibold">
+            <FolderDown />
             Import
           </Button>
-          <Button onClick={() => router.push(`/buyers/export${window.location.search}`)}>
-            <FolderUp className="mr-2 h-4 w-4" />
+          <Button onClick={() => router.push(`/buyers/export${window.location.search}`)} className="cursor-pointer flex items-center justify-center gap-1 hover:bg-transparent border-2 border-blue-400 hover:text-blue-400 bg-blue-400 font-semibold">
+            <FolderUp />
             Export
           </Button>
         </div>
@@ -253,7 +256,7 @@ export default function BuyersPage() {
       <div className="rounded-md border overflow-x-auto shadow-sm">
       <table className="w-full table-auto border-collapse">
         <thead>
-          <tr className="bg-muted text-sm text-muted-foreground">
+          <tr className=" text-sm text-gray-500 bg-blue-50">
               {["Name", "Phone", "City", "Property Type", "BHK", "Budget", "Timeline", "Status", "Updated", "Actions"].map((label, i) => (
                 <th key={i} className="p-2 border-r text-left">{label}</th>
               ))}
@@ -264,7 +267,7 @@ export default function BuyersPage() {
               <tr>
                 <td colSpan={10} className="text-center py-6">
                   <div className="flex justify-center">
-                    <PulseLoader />
+                    <PulseLoader color="#2563eb" />
                   </div>
                 </td>
               </tr>
@@ -274,7 +277,7 @@ export default function BuyersPage() {
               </tr>
             ) : (
               buyersData?.buyers.map((buyer) => (
-                <tr key={buyer.id} className="border-b border-muted hover:bg-muted/50">
+                <tr key={buyer.id} className="border-b border-muted hover:bg-blue-50/40 text-gray-700">
                   <td className="p-2 border-r border-muted">{buyer.fullName}</td>
                   <td className="p-2 border-r border-muted">{buyer.phone}</td>
                   <td className="p-2 border-r border-muted">{buyer.city}</td>
@@ -292,11 +295,11 @@ export default function BuyersPage() {
                   <td className="p-2 border-r border-muted">{new Date(buyer.updatedAt).toLocaleString()}</td>
                   <td className="p-2 flex gap-1">
                     {(currentUser?.role === "ADMIN" || currentUser?.id === buyer.ownerId) && (
-                      <Button variant="outline" size="sm" onClick={() => router.push(`/buyers/${buyer.id}`)}>
+                      <Button variant="outline" size="sm" onClick={() => router.push(`/buyers/${buyer.id}`)} className="hover:text-blue-400 border hover:border-blue-400 cursor-pointer">
                         <Pencil className="w-4 h-4" />
                       </Button>
                     )}
-                    <Button variant="outline" size="sm" onClick={() => router.push(`/buyers/${buyer.id}/view`)}>
+                    <Button variant="outline" size="sm" onClick={() => router.push(`/buyers/${buyer.id}/view`)} className="hover:text-blue-400 border hover:border-blue-400 cursor-pointer">
                       <Eye className="w-4 h-4" />
                     </Button>
                   </td>
@@ -309,16 +312,18 @@ export default function BuyersPage() {
 
       {/* Pagination */}
       <div className="flex justify-center items-center mt-6 gap-4">
-        <Button onClick={() => goToPage((filters.page ?? 1) - 1)} disabled={(filters.page ?? 1) <= 1} size="icon" variant="secondary">
+        <Button onClick={() => goToPage((filters.page ?? 1) - 1)} disabled={(filters.page ?? 1) <= 1} size="icon" variant="secondary" className="bg-blue-50 hover:bg-blue-100 rounded-full">
           <ChevronLeftIcon />
         </Button>
         <span className="text-sm text-muted-foreground">
           Page {filters.page} of {buyersData?.totalPages ?? 1}
         </span>
-        <Button onClick={() => goToPage((filters.page ?? 1) + 1)} disabled={(filters.page ?? 1) >= (buyersData?.totalPages ?? 1)} size="icon" variant="secondary">
+        <Button onClick={() => goToPage((filters.page ?? 1) + 1)} disabled={(filters.page ?? 1) >= (buyersData?.totalPages ?? 1)} size="icon" variant="secondary" className="bg-blue-50 hover:bg-blue-100 rounded-full">
           <ChevronRightIcon />
         </Button>
       </div>
     </div>
+    </div>
+    </ErrorBoundary>
   )
 }

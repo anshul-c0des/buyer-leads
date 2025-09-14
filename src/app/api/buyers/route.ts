@@ -149,7 +149,7 @@ export async function POST(req: Request) {
       bhk: mapBhkToPrisma(data.bhk),
       timeline: mapTimelineToPrisma(data.timeline),
       source: mapSourceToPrisma(data.source),
-      tags: data.tags ? Array.isArray(data.tags) ? data.tags : [data.tags] : [],
+      tags: Array.isArray(data.tags) ? data.tags.map(tag => tag.value) : [],
       ownerId: dbUser.id,
     }
 

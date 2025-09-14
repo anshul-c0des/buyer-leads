@@ -79,8 +79,9 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="max-w-md mx-auto p-6">
-      <h1 className="text-2xl mb-6">Sign Up</h1>
+    <div className="min-h-screen bg-gray-50">
+    <div className="max-w-md mx-auto p-6 bg-white rounded-md shadow-xs">  
+      <h1 className="text-3xl mb-6 text-blue-400 font-semibold">Sign Up</h1>
 
       <div className="mb-4">
         <label htmlFor="name" className="block mb-1">Name</label>
@@ -128,7 +129,7 @@ export default function SignupPage() {
 
       {error && <p className="text-red-600 mb-4">{error}</p>}
 
-      <Button onClick={handleSignup} disabled={loading} className=" cursor-pointer flex items-center justify-center gap-2">
+      <Button onClick={handleSignup} disabled={loading} className="cursor-pointer flex items-center justify-center gap-2 hover:bg-transparent border-2 border-blue-400 hover:text-blue-400 bg-blue-400 font-semibold">
         {loading && <Loader2 className="animate-spin h-4 w-4" />}
         {loading ? "Signing up..." : "Sign Up"}
       </Button>
@@ -145,6 +146,7 @@ export default function SignupPage() {
           </Button>
         </p>
       </div>
+    </div>
     </div>
   )
 }

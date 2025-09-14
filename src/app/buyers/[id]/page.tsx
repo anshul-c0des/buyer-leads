@@ -1,8 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { useRouter, useParams } from "next/navigation"
-import { useForm, Controller } from "react-hook-form"
+import { useForm, Controller, useFieldArray } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import { buyerSchema } from "@/lib/zod/buyerSchema"
@@ -20,7 +20,7 @@ import {
 import { supabase } from "@/lib/supabaseClient"
 import { toast } from "sonner"
 import { HashLoader } from "react-spinners"
-import { Save, Trash } from "lucide-react"
+import { Save, Trash, X } from "lucide-react"
 
 type BuyerFormData = z.infer<typeof buyerSchema>
 
@@ -31,6 +31,8 @@ export default function EditBuyerPage() {
 
   const [loading, setLoading] = useState(true)
   const [deleting, setDeleting] = useState(false)
+  const predefinedTags = ["Investor", "NRI", "Luxury", "Urgent", "Budget", "First-time"]
+  const tagInputRef = useRef<HTMLInputElement | null>(null)
 
   const {
     register,
@@ -41,8 +43,22 @@ export default function EditBuyerPage() {
     formState: { errors, isSubmitting },
   } = useForm<BuyerFormData>({
     resolver: zodResolver(buyerSchema),
-    defaultValues: {},
+    defaultValues: { tags: [] },
   })
+
+  const { fields, append, remove } = useFieldArray({
+    control,
+    name: "tags",
+  })
+
+  const addTag = (tag: string) => {
+    const cleanTag = tag.trim()
+    if (!cleanTag) return
+    const existing = watch("tags") || []
+    const existingValues = existing.map((t) => t.value)
+    if (existingValues.includes(cleanTag)) return
+    append({ value: cleanTag })
+  }
 
   const propertyType = watch("propertyType")
 
@@ -61,13 +77,13 @@ export default function EditBuyerPage() {
 
         const { buyer } = await res.json()
 
-        const buyerData = {
+        const formatted = {
           ...buyer,
           bhk: buyer.bhk ?? "",
-          tags: buyer.tags?.join(", ") ?? "",
+          tags: (buyer.tags || []).map((value: string) => ({ value })),
         }
 
-        reset(buyerData)
+        reset(formatted)
       } catch (err: any) {
         toast.error(err.message || "Failed to load buyer data")
       } finally {
@@ -83,13 +99,18 @@ export default function EditBuyerPage() {
       const { data: { session } } = await supabase.auth.getSession()
       const accessToken = session?.access_token
 
+      const transformedData = {
+        ...data,
+        tags: data.tags?.map((t) => t.value) || [],
+      }
+
       const res = await fetch(`/api/buyers/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
           Authorization: `Bearer ${accessToken}`,
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify(transformedData),
       })
 
       const result = await res.json()
@@ -131,43 +152,36 @@ export default function EditBuyerPage() {
     }
   }
 
-  if (loading){
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-[60vh]">
-        <HashLoader />
+        <HashLoader color="#2563eb" />
       </div>
     )
   }
 
   return (
-    <div className="max-w-3xl mx-auto p-6 bg-white rounded-lg shadow-md">
-      <h1 className="text-3xl font-extrabold mb-8 border-b pb-3">
-        Edit Buyer Lead
-      </h1>
+    <div className="min-h-screen bg-gray-50">
+    <div className="max-w-3xl mx-auto p-6 bg-white rounded-md shadow-md">
+      <h1 className="text-3xl font-extrabold mb-8 border-b pb-3 text-blue-400">Edit Buyer Lead</h1>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         <div className="grid gap-1">
           <Label htmlFor="fullName">Full Name</Label>
           <Input id="fullName" {...register("fullName")} />
-          {errors.fullName && (
-            <p className="mt-1 text-sm text-red-600">{errors.fullName.message}</p>
-          )}
+          {errors.fullName && <p className="text-sm text-red-600">{errors.fullName.message}</p>}
         </div>
 
         <div className="grid gap-1">
           <Label htmlFor="phone">Phone</Label>
           <Input id="phone" {...register("phone")} />
-          {errors.phone && (
-            <p className="mt-1 text-sm text-red-600">{errors.phone.message}</p>
-          )}
+          {errors.phone && <p className="text-sm text-red-600">{errors.phone.message}</p>}
         </div>
 
         <div className="grid gap-1">
           <Label htmlFor="email">Email</Label>
           <Input id="email" {...register("email")} />
-          {errors.email && (
-            <p className="mt-1 text-sm text-red-600">{errors.email.message}</p>
-          )}
+          {errors.email && <p className="text-sm text-red-600">{errors.email.message}</p>}
         </div>
 
         <div className="grid gap-1">
@@ -190,9 +204,7 @@ export default function EditBuyerPage() {
               </Select>
             )}
           />
-          {errors.city && (
-            <p className="text-sm text-red-500">{errors.city.message}</p>
-          )}
+          {errors.city && <p className="text-sm text-red-500">{errors.city.message}</p>}
         </div>
 
         <div className="grid gap-1">
@@ -215,20 +227,18 @@ export default function EditBuyerPage() {
               </Select>
             )}
           />
-          {errors.propertyType && (
-            <p className="text-sm text-red-500">{errors.propertyType.message}</p>
-          )}
+          {errors.propertyType && <p className="text-sm text-red-500">{errors.propertyType.message}</p>}
         </div>
 
         {["Apartment", "Villa"].includes(propertyType ?? "") && (
           <div className="grid gap-1">
-            <Label htmlFor="bhk">BHK</Label>
+            <Label>BHK</Label>
             <Controller
               name="bhk"
               control={control}
               render={({ field }) => (
                 <Select onValueChange={field.onChange} value={field.value ?? undefined}>
-                  <SelectTrigger id="bhk">
+                  <SelectTrigger>
                     <SelectValue placeholder="Select BHK" />
                   </SelectTrigger>
                   <SelectContent>
@@ -241,20 +251,18 @@ export default function EditBuyerPage() {
                 </Select>
               )}
             />
-            {errors.bhk && (
-              <p className="mt-1 text-sm text-red-600">{errors.bhk.message}</p>
-            )}
+            {errors.bhk && <p className="text-sm text-red-600">{errors.bhk.message}</p>}
           </div>
         )}
 
         <div className="grid gap-1">
-          <Label htmlFor="purpose">Purpose</Label>
+          <Label>Purpose</Label>
           <Controller
             name="purpose"
             control={control}
             render={({ field }) => (
               <Select onValueChange={field.onChange} value={field.value || ""}>
-                <SelectTrigger id="purpose">
+                <SelectTrigger>
                   <SelectValue placeholder="Select purpose" />
                 </SelectTrigger>
                 <SelectContent>
@@ -264,9 +272,7 @@ export default function EditBuyerPage() {
               </Select>
             )}
           />
-          {errors.purpose && (
-            <p className="mt-1 text-sm text-red-600">{errors.purpose.message}</p>
-          )}
+          {errors.purpose && <p className="text-sm text-red-600">{errors.purpose.message}</p>}
         </div>
 
         <div className="grid gap-1">
@@ -278,9 +284,7 @@ export default function EditBuyerPage() {
               setValueAs: (v) => (v === "" ? null : Number(v)),
             })}
           />
-          {errors.budgetMin && (
-            <p className="mt-1 text-sm text-red-600">{errors.budgetMin.message}</p>
-          )}
+          {errors.budgetMin && <p className="text-sm text-red-600">{errors.budgetMin.message}</p>}
         </div>
 
         <div className="grid gap-1">
@@ -292,14 +296,50 @@ export default function EditBuyerPage() {
               setValueAs: (v) => (v === "" ? null : Number(v)),
             })}
           />
-          {errors.budgetMax && (
-            <p className="mt-1 text-sm text-red-600">{errors.budgetMax.message}</p>
-          )}
+          {errors.budgetMax && <p className="text-sm text-red-600">{errors.budgetMax.message}</p>}
         </div>
 
         <div className="grid gap-1">
-          <Label htmlFor="tags">Tags (comma separated)</Label>
-          <Input id="tags" {...register("tags")} placeholder="e.g. NRI,Investor" />
+          <Label>Tags</Label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {fields.map((tag, index) => (
+              <span
+                key={tag.id}
+                className="bg-gray-200 text-sm px-2 py-1 rounded-full flex items-center gap-1"
+              >
+                {tag.value}
+                <button type="button" onClick={() => remove(index)}>
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+
+          <Input
+            ref={tagInputRef}
+            placeholder="Type and press enter"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault()
+                addTag(e.currentTarget.value)
+                e.currentTarget.value = ""
+              }
+            }}
+          />
+
+          <div className="flex flex-wrap gap-2 mt-2">
+            {predefinedTags.map((tag) => (
+              <Button
+                key={tag}
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => addTag(tag)}
+              >
+                {tag}
+              </Button>
+            ))}
+          </div>
         </div>
 
         <div className="grid gap-1">
@@ -308,20 +348,20 @@ export default function EditBuyerPage() {
         </div>
 
         <div className="flex gap-4 mt-6">
-          <Button type="submit" disabled={isSubmitting} className="cursor-pointer">
+          <Button type="submit" disabled={isSubmitting} className="hover:bg-transparent border-2 font-semi  bold cursor-pointer hover:text-blue-500 border-blue-500 bg-blue-400 text-white">
             <Save /> {isSubmitting ? "Saving..." : "Save Lead"}
           </Button>
           <Button
             type="button"
-            variant="destructive"
             onClick={handleDelete}
             disabled={deleting}
-            className="cursor-pointer"
+            className="bg-transparent border-2 font-semi  bold cursor-pointer text-red-500 border-red-500 hover:bg-red-500 hover:text-white"
           >
-            <Trash/> {deleting ? "Deleting..." : "Delete Lead"}
+            <Trash /> {deleting ? "Deleting..." : "Delete Lead"}
           </Button>
         </div>
       </form>
+    </div>
     </div>
   )
 }

@@ -74,7 +74,7 @@ export default function BuyerViewPage() {
   if (loading)
     return (
       <div className="flex justify-center items-center h-[60vh]">
-        <HashLoader />
+        <HashLoader color="#2563eb" />
       </div>
     )
 
@@ -108,24 +108,25 @@ export default function BuyerViewPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8 bg-white rounded-lg shadow-md">
+    <div className="min-h-screen bg-gray-50">
+    <div className="max-w-4xl mx-auto p-6 space-y-8 bg-white rounded-md shadow-md">
       <h1 className="text-3xl font-extrabold mb-6 border-b pb-2">
-        Buyer Details: <span className="text-blue-600">{buyer.fullName}</span>
+        Buyer Name: <span className="text-blue-400">{buyer.fullName}</span>
       </h1>
 
       {/* Buyer Info */}
       <section className="grid grid-cols-1 sm:grid-cols-2 gap-6 border-b pb-6">
         <div className="space-y-2">
           <p>
-            <span className="font-semibold">Phone:</span> {buyer.phone}
+            <span className="font-bold text-blue-400/80">Phone:</span> {buyer.phone}
           </p>
           <p>
-            <span className="font-semibold">Email:</span> {buyer.email ?? "-"}
+            <span className="font-bold text-blue-400/80">Email:</span> {buyer.email ?? "-"}
           </p>
         </div>
         <div className="space-y-2">
           <p>
-            <span className="font-semibold">Last Updated:</span>{" "}
+            <span className="font-bold text-blue-400/80">Last Updated:</span>{" "}
             {new Date(buyer.updatedAt).toLocaleString()}
           </p>
         </div>
@@ -160,10 +161,11 @@ export default function BuyerViewPage() {
 
       {/* Back Button */}
       <div className="pt-4 border-t">
-        <Button onClick={() => router.back()} variant="outline" className="cursor-pointer">
+        <Button onClick={() => router.back()} variant="outline" className="cursor-pointer text-blue-500 border-blue-500 hover:text-blue-500">
           Back
         </Button>
       </div>
+    </div>
     </div>
   )
 }

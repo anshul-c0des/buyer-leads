@@ -79,16 +79,16 @@ export default function Navbar() {
   const showBackButton = pathname !== "/buyers"
 
   return (
-    <nav className="w-full border-b border-gray-200">
+    <nav className="w-full bg-white border-b border-gray-200">
       <div className="max-w-6xl mx-auto px-6 sm:px-12 py-4 flex justify-between items-center">
         <div className="flex items-center gap-3">
         {showBackButton && (
           <button
             onClick={() => router.back()}
             aria-label="Go back"
-            className="p-2 rounded hover:bg-gray-100 transition"
+            className="p-1.5 bg-blue-50 hover:bg-blue-100 rounded-full transition"
           >
-            <ArrowLeft className="w-6 h-6" />
+            <ArrowLeft className="w-6 h-6 mt-1 text-blue-700" />
           </button>
         )}
 
@@ -96,14 +96,14 @@ export default function Navbar() {
           <Link href="/buyers">
             <div className="flex items-center gap-1 cursor-pointer">
               <Image src="/logo.png" alt="BuyerBase Logo" width={35} height={35} />
-              <h1 className="text-xl font-bold">Buyer Base</h1>
+              <h1 className="text-3xl font-bold text-blue-500">Buyers Base</h1>
             </div>
           </Link>
         </div>
 
         <div className="flex items-center gap-4">
           {user && (
-            <Button variant="secondary" className="cursor-pointer" onClick={() => router.push("/buyers/new")}>
+            <Button variant="secondary" className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white" onClick={() => router.push("/buyers/new")}>
               <BadgePlus /> Add Lead
             </Button>
           )}
@@ -113,7 +113,7 @@ export default function Navbar() {
               <DropdownMenuTrigger asChild>
                 <button
                   aria-label="User menu"
-                  className="w-10 h-10 rounded-full bg-gray-800 text-white flex items-center justify-center font-semibold cursor-pointer"
+                  className="w-10 h-10 rounded-full bg-blue-500 hover:bg-blue-600 text-white flex items-center justify-center font-semibold cursor-pointer"
                 >
                   {user.initial}
                 </button>
@@ -123,24 +123,24 @@ export default function Navbar() {
                   <LayoutDashboard /> Dashboard
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout} className="text-red-500 hover:text-red-700">
-                  <LogOut className="text-current group-hover:text-red-800" /> Logout
+                  <LogOut className="text-current hover:text-red-800" /> Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
             <>
               {onLoginPage && (
-                <Button className="cursor-pointer" onClick={() => router.push("/sign-up")}>
+                <Button className="cursor-pointer bg-blue-500 hover:bg-blue-600" onClick={() => router.push("/sign-up")}>
                   Sign Up
                 </Button>
               )}
               {onSignupPage && (
-                <Button className="cursor-pointer" onClick={() => router.push("/login")}>
+                <Button className="cursor-pointer bg-blue-500 hover:bg-blue-600" onClick={() => router.push("/login")}>
                   Login
                 </Button>
               )}
               {!onLoginPage && !onSignupPage && (
-                <Button className="cursor-pointer" onClick={() => router.push("/login")}>
+                <Button className="cursor-pointer bg-blue-500 hover:bg-blue-600" onClick={() => router.push("/login")}>
                   Login
                 </Button>
               )}
