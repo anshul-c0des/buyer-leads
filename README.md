@@ -101,11 +101,11 @@ This app enables users to:
 
 ## What's Skipped
 
-### Nice-to-Haves Skipped
+Nice-to-Haves Skipped
 - Optimistic edit with rollback – Not implemented; currently using standard form submission with loading indicators.
 - File upload for attachmentUrl – Not implemented due to time constraints and optional nature.
 
-### Quality Bar – Skipped
+Quality Bar – Skipped
 - 1 unit test (CSV or budget validator) – Skipped due to limited testing experience; planned for future work.
 
 
