@@ -51,7 +51,6 @@ This app enables users to:
 
 - **Testing:** No unit tests currently due to limited experience; planned for future iterations  
 - **Accessibility:** Basic accessibility practices followed, but full a11y compliance is a work in progress  
-- **Deployment:** App is not deployed yet but is fully runnable locally  
 
 ---
 
