@@ -39,25 +39,6 @@ This app enables users to:
 
 ---
 
-## ✅What's Done
-
-- Lead CRUD with validation
-- CSV import/export (with error reporting)
-- Search/filter with server-side pagination
-- Role-based access (user/admin)
-- Change history per lead
-
-## What's Skipped
-
-### Nice-to-Haves Skipped
-- Optimistic edit with rollback – Not implemented; currently using standard form submission with loading indicators.
-- File upload for attachmentUrl – Not implemented due to time constraints and optional nature.
-- 
-### Quality Bar – Skipped
-- 1 unit test (CSV or budget validator) – Skipped due to limited testing experience; planned for future work.
-
----
-
 ## Getting Started ▶️
 
 ### Prerequisites
@@ -96,6 +77,7 @@ This app enables users to:
 
 ---
 
+
 🧠 Design Notes
 
 -  Validation via Zod schemas on both client and server for consistent data integrity
@@ -105,6 +87,26 @@ This app enables users to:
 -  Concurrency handled with updatedAt timestamp to avoid stale updates
 -  Rate limiting applied at API level based on authenticated user context
 -  UI built with shadcn/ui + Tailwind for clean, accessible, and responsive design enhanced by smooth UX features
+
+
+---
+
+## What's Done
+
+- Lead CRUD with validation
+- CSV import/export (with error reporting)
+- Search/filter with server-side pagination
+- Role-based access (user/admin)
+- Change history per lead
+
+## What's Skipped
+
+### Nice-to-Haves Skipped
+- Optimistic edit with rollback – Not implemented; currently using standard form submission with loading indicators.
+- File upload for attachmentUrl – Not implemented due to time constraints and optional nature.
+
+### Quality Bar – Skipped
+- 1 unit test (CSV or budget validator) – Skipped due to limited testing experience; planned for future work.
 
 
 ---
