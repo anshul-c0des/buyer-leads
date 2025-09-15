@@ -46,18 +46,15 @@ export default function EditBuyerPage() {
     defaultValues: { tags: [] },
   })
 
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "tags",
-  })
-
+  const [tags, setTags] = useState<string[]>([])
   const addTag = (tag: string) => {
     const cleanTag = tag.trim()
-    if (!cleanTag) return
-    const existing = watch("tags") || []
-    const existingValues = existing.map((t) => t.value)
-    if (existingValues.includes(cleanTag)) return
-    append({ value: cleanTag })
+    if (cleanTag && !tags.includes(cleanTag)) {
+      setTags([...tags, cleanTag])
+    }
+  }
+  const removeTag = (tag: string) => {
+    setTags(tags.filter(t => t !== tag))
   }
 
   const propertyType = watch("propertyType")
@@ -101,7 +98,7 @@ export default function EditBuyerPage() {
 
       const transformedData = {
         ...data,
-        tags: data.tags?.map((t) => t.value) || [],
+        tags,
       }
 
       const res = await fetch(`/api/buyers/${id}`, {
@@ -302,32 +299,39 @@ export default function EditBuyerPage() {
         <div className="grid gap-1">
           <Label>Tags</Label>
           <div className="flex flex-wrap gap-2 mb-2">
-            {fields.map((tag, index) => (
-              <span
-                key={tag.id}
-                className="bg-gray-200 text-sm px-2 py-1 rounded-full flex items-center gap-1"
+            {tags.map((tag) => (
+              <div
+                key={tag}
+                className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full text-sm"
               >
-                {tag.value}
-                <button type="button" onClick={() => remove(index)}>
-                  <X className="w-3 h-3" />
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  className="text-muted-foreground hover:text-destructive"
+                  aria-label={`Remove tag ${tag}`}
+                >
+                  <X size={14} />
                 </button>
-              </span>
+              </div>
             ))}
           </div>
 
           <Input
             ref={tagInputRef}
+            id="tags"
             placeholder="Type and press enter"
             onKeyDown={(e) => {
               if (e.key === "Enter") {
                 e.preventDefault()
-                addTag(e.currentTarget.value)
+                const inputValue = e.currentTarget.value
+                addTag(inputValue)
                 e.currentTarget.value = ""
               }
             }}
           />
 
-          <div className="flex flex-wrap gap-2 mt-2">
+          <div className="mt-1 flex flex-wrap gap-2 text-sm text-muted-foreground">
             {predefinedTags.map((tag) => (
               <Button
                 key={tag}

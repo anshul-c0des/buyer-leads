@@ -43,14 +43,14 @@ export async function POST(req: NextRequest) {
     const timeline = mapTimelineToPrisma(data.timeline)
     const source = mapSourceToPrisma(data.source)
 
-    const newBuyer = await prisma.buyer.create({
+    const newBuyer = await prisma.buyer.create({ 
       data: {
         ...data,
         bhk,
         timeline,
         source,
         ownerId: user.id,
-        tags: Array.isArray(data.tags) ? data.tags.map(tag => tag.value) : [],
+        tags: data.tags,
       },
     })
 
@@ -118,7 +118,7 @@ export async function PUT(
         bhk: bhk ?? null,
         timeline: mapTimelineToPrisma(data.timeline),
         source: mapSourceToPrisma(data.source),
-        tags: Array.isArray(data.tags) ? data.tags.map((tag) => tag.value) : [],
+        tags: data.tags,
       },
     });
 

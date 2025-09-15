@@ -44,20 +44,17 @@ export default function NewBuyerPage() {
     defaultValues: {tags: []}
   })
   
-  const { fields, append, remove } = useFieldArray({
-    control,
-    name: "tags"
-  })
-
+  const [tags, setTags] = useState<string[]>([])
   const addTag = (tag: string) => {
     const cleanTag = tag.trim()
-    if (!cleanTag) return
-    const existing = watch("tags") || []
-    const existingValues = existing.map((t) => t.value)
-    if (existingValues.includes(cleanTag)) return
-    append({value:cleanTag})
+    if (cleanTag && !tags.includes(cleanTag)) {
+      setTags([...tags, cleanTag])
+    }
   }
-  
+  const removeTag = (tag: string) => {
+    setTags(tags.filter(t => t !== tag))
+  }
+
   useEffect(() => {
     async function checkAuth() {
       try {
@@ -89,7 +86,7 @@ export default function NewBuyerPage() {
 
       const transformedData = {
         ...data,
-        tags: data.tags?.map((tagObj) => tagObj.value) || [],
+        tags,
       }
 
       const res = await fetch("/api/buyers", {
@@ -371,26 +368,22 @@ export default function NewBuyerPage() {
 
           {/* Display tags */}
           <div className="flex flex-wrap gap-2 mb-2">
-            {fields.map((field, index) => {
-              // watch tags to get actual string value for each field
-              const tag = field.value ?? ""
-              return (
-                <div
-                  key={field.id}
-                  className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full text-sm"
+            {tags.map((tag) => (
+              <div
+                key={tag}
+                className="flex items-center gap-1 bg-muted px-2 py-1 rounded-full text-sm"
+              >
+                {tag}
+                <button
+                  type="button"
+                  onClick={() => removeTag(tag)}
+                  className="text-muted-foreground hover:text-destructive"
+                  aria-label={`Remove tag ${tag}`}
                 >
-                  {tag}
-                  <button
-                    type="button"
-                    onClick={() => remove(index)}
-                    className="text-muted-foreground hover:text-destructive"
-                    aria-label={`Remove tag ${tag}`}
-                  >
-                    <X size={14} />
-                  </button>
-                </div>
-              )
-            })}
+                  <X size={14} />
+                </button>
+              </div>
+            ))}
           </div>
 
           {/* Input to add tags */}
