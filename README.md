@@ -1,9 +1,9 @@
 # 🚀 Mini Buyer Lead Intake App
 
-A streamlined web application to capture, manage, and track buyer leads efficiently. Key features include data validation, advanced search and filtering, CSV import/export, user authentication, and role-based access control.
+A streamlined web application to capture, manage, and track buyer leads efficiently..
 ---
 
-## 📝 Project Overview
+## 📝 App Overview
 
 This app enables users to:
 
@@ -19,39 +19,23 @@ This app enables users to:
 
 ## 🛠️ Tech Stack
 
-- **Framework:** Next.js (App Router) + TypeScript  
-- **UI:** Tailwind CSS, shadcn/ui, lucide-react icons, sonner (toast notifications)  
-- **Database:** Supabase (Postgres)  
-- **ORM & Migrations:** Prisma  
-- **Authentication:** Supabase Auth (email/password sign-up and login)  
-- **Validation:** Zod (client and server-side)  
-- **Deployment** Vercel
+- Built with Next.js (App Router), TypeScript, Tailwind, Prisma, and Supabase.
 
 ---
 
-## ✅ Features Implemented
+## ✅ Features
 
-- **CRUD Operations:** Full create, read, update, delete for buyer leads  
-- **Lead Data Model:** Includes fields such as fullName, phone, email, city, propertyType, BHK, budget range, timeline, source, status, tags, notes, and ownership  
-- **Search & Filters:** Server-side rendered paginated list with filters for city, property type, status, timeline, and debounced search by name, phone, or email  
-- **CSV Import/Export:** Upload up to 200 rows with row-level validation and error reporting; export filtered lead lists respecting current filters and sorting  
-- **Role-Based Export Access:**  
-  - Regular users can **only export leads they own**  
-  - Admin users (must be assigned manually in the database) can edit as well as export **all leads**
-- **Change History:** Stores last 5 changes per lead in a separate `buyer_history` table, showing who changed what and when  
-- **Authentication & Authorization:** Users can sign up/login via email/password. Only owners can edit/delete their leads. All logged-in users can read leads.  
-- **Dashboard:** Displays user profile info and leads created by them for quick access  
-- **Rate Limiting:** Limits each user to 10 create/update requests per minute to prevent abuse (enforced via Supabase Auth user context)  
-- **UI/UX Enhancements:** Tag chips with typeahead, smooth user feedback via toast notifications, concurrency handling via `updatedAt` timestamp check  
-- **Error Handling:** Error boundary implemented for better user experience  
-
----
-
-## What’s Skipped / Future Work ⚠️
-
-- **Testing:** No unit tests currently due to limited experience; planned for future iterations  
-- **Accessibility:** Basic accessibility practices followed, but full a11y compliance is a work in progress  
-- **Deployment:** App is not deployed yet but is fully runnable locally  
+- Lead CRUD – Create, view, update, delete buyer leads with form validation
+- CSV Import/Export – Import up to 200 leads with row-level validation; export filtered results
+- Search & Filter – Server-side search and filters with pagination
+- Role-Based Access – Users can manage their own leads; admins can manage all
+- Authentication – Email/password login via Supabase Auth
+- Change History – Tracks the last 5 changes per lead (who, what, when)
+- Rate Limiting – Limits to 10 create/update actions per minute per user
+- Error Handling – Graceful fallbacks via error boundaries and empty states
+- Tag Chips with Typeahead – For better lead tagging UX
+- Dashboard – Personalized view of leads owned by the logged-in user
+- Responsive UI – Built with Tailwind CSS and shadcn/ui for clean, accessible design  
 
 ---
 
@@ -79,7 +63,7 @@ This app enables users to:
    DATABASE_URL="your_supabase_database_url"
    NEXT_PUBLIC_SUPABASE_URL="your_supabase_url"
    NEXT_PUBLIC_SUPABASE_ANON_KEY="your_supabase_anon_key"
-   SUPABASE_SERVICE_ROLE_KEY="your_serv-ce_role_key"
+   SUPABASE_SERVICE_ROLE_KEY="your_service_role_key"
    ```
 4. Run Prisma migrations
    ```bash
@@ -93,7 +77,8 @@ This app enables users to:
 
 ---
 
-🧠 Design Notes
+
+## 🧠 Design Notes
 
 -  Validation via Zod schemas on both client and server for consistent data integrity
 -  Server-side rendered lead list with real pagination and URL-synced filters
@@ -103,17 +88,26 @@ This app enables users to:
 -  Rate limiting applied at API level based on authenticated user context
 -  UI built with shadcn/ui + Tailwind for clean, accessible, and responsive design enhanced by smooth UX features
 
- ---
 
-## 🌟 Key Learnings & Skills Demonstrated
+---
 
--  Integrating Next.js App Router with Prisma and server-side rendering
--  Implementing robust validation with Zod across client and server
--  Managing authentication and authorization securely with Supabase Auth
--  Handling data concurrency and maintaining audit trails via change history
--  Building user-friendly CSV import/export with detailed validation feedback
--  Applying rate limiting and error boundaries for production readiness
--  Designing and enforcing role-based access control
+## What's Done
+
+- Lead CRUD with validation
+- CSV import/export (with error reporting)
+- Search/filter with server-side pagination
+- Role-based access (user/admin)
+- Change history per lead
+
+## What's Skipped
+
+Nice-to-Haves Skipped
+- Optimistic edit with rollback – Not implemented; currently using standard form submission with loading indicators.
+- File upload for attachmentUrl – Not implemented due to time constraints and optional nature.
+
+Quality Bar – Skipped
+- 1 unit test (CSV or budget validator) – Skipped due to limited testing experience; planned for future work.
+
 
 ---
 
