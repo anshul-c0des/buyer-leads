@@ -1,9 +1,9 @@
 # 🚀 Mini Buyer Lead Intake App
 
-A streamlined web application to capture, manage, and track buyer leads efficiently. Key features include data validation, advanced search and filtering, CSV import/export, user authentication, and role-based access control.
+A streamlined web application to capture, manage, and track buyer leads efficiently..
 ---
 
-## 📝 Project Overview
+## 📝 App Overview
 
 This app enables users to:
 
@@ -29,7 +29,7 @@ This app enables users to:
 
 ---
 
-## ✅ Features Implemented
+## ✅ Features
 
 - **CRUD Operations:** Full create, read, update, delete for buyer leads  
 - **Lead Data Model:** Includes fields such as fullName, phone, email, city, propertyType, BHK, budget range, timeline, source, status, tags, notes, and ownership  
@@ -47,10 +47,26 @@ This app enables users to:
 
 ---
 
-## What’s Skipped / Future Work ⚠️
+## Nice-to-Haves Implemented
 
-- **Testing:** No unit tests currently due to limited experience; planned for future iterations  
-- **Accessibility:** Basic accessibility practices followed, but full a11y compliance is a work in progress  
+- ✅ Tag chips with typeahead – Implemented using custom input with autocomplete UX.
+- ✅ Basic full-text search on fullName, email, notes – Implemented via server-side filters with debounced input.
+- ✅ Status quick-actions (dropdown in table) – Added inline dropdown to change status from the lead list table.
+
+## Quality Bar Implemented
+
+- ✅ Simple rate limit on create/update (per user) – Enforced via Supabase RLS policies and custom logic limiting to 10 req/min/user.
+- ✅ Error boundary + empty state – Implemented via React ErrorBoundary and conditional rendering for no-leads case.
+- ✅ Accessibility basics – Labels, keyboard navigation, and basic ARIA attributes used (still needs more testing).
+
+## What's Skipped
+
+### Nice-to-Haves Skipped
+- Optimistic edit with rollback – Not implemented; currently using standard form submission with loading indicators.
+- File upload for attachmentUrl – Not implemented due to time constraints and optional nature.
+- 
+### Quality Bar – Skipped
+- 1 unit test (CSV or budget validator) – Skipped due to limited testing experience; planned for future work.
 
 ---
 
@@ -78,7 +94,7 @@ This app enables users to:
    DATABASE_URL="your_supabase_database_url"
    NEXT_PUBLIC_SUPABASE_URL="your_supabase_url"
    NEXT_PUBLIC_SUPABASE_ANON_KEY="your_supabase_anon_key"
-   SUPABASE_SERVICE_ROLE_KEY="your_serv-ce_role_key"
+   SUPABASE_SERVICE_ROLE_KEY="your_service_role_key"
    ```
 4. Run Prisma migrations
    ```bash
