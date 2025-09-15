@@ -19,45 +19,33 @@ This app enables users to:
 
 ## 🛠️ Tech Stack
 
-- **Framework:** Next.js (App Router) + TypeScript  
-- **UI:** Tailwind CSS, shadcn/ui, lucide-react icons, sonner (toast notifications)  
-- **Database:** Supabase (Postgres)  
-- **ORM & Migrations:** Prisma  
-- **Authentication:** Supabase Auth (email/password sign-up and login)  
-- **Validation:** Zod (client and server-side)  
-- **Deployment** Vercel
+- Built with Next.js (App Router), TypeScript, Tailwind, Prisma, and Supabase.
 
 ---
 
 ## ✅ Features
 
-- **CRUD Operations:** Full create, read, update, delete for buyer leads  
-- **Lead Data Model:** Includes fields such as fullName, phone, email, city, propertyType, BHK, budget range, timeline, source, status, tags, notes, and ownership  
-- **Search & Filters:** Server-side rendered paginated list with filters for city, property type, status, timeline, and debounced search by name, phone, or email  
-- **CSV Import/Export:** Upload up to 200 rows with row-level validation and error reporting; export filtered lead lists respecting current filters and sorting  
-- **Role-Based Export Access:**  
-  - Regular users can **only export leads they own**  
-  - Admin users (must be assigned manually in the database) can edit as well as export **all leads**
-- **Change History:** Stores last 5 changes per lead in a separate `buyer_history` table, showing who changed what and when  
-- **Authentication & Authorization:** Users can sign up/login via email/password. Only owners can edit/delete their leads. All logged-in users can read leads.  
-- **Dashboard:** Displays user profile info and leads created by them for quick access  
-- **Rate Limiting:** Limits each user to 10 create/update requests per minute to prevent abuse (enforced via Supabase Auth user context)  
-- **UI/UX Enhancements:** Tag chips with typeahead, smooth user feedback via toast notifications, concurrency handling via `updatedAt` timestamp check  
-- **Error Handling:** Error boundary implemented for better user experience  
+- Lead CRUD – Create, view, update, delete buyer leads with form validation
+- CSV Import/Export – Import up to 200 leads with row-level validation; export filtered results
+- Search & Filter – Server-side search and filters with pagination
+- Role-Based Access – Users can manage their own leads; admins can manage all
+- Authentication – Email/password login via Supabase Auth
+- Change History – Tracks the last 5 changes per lead (who, what, when)
+- Rate Limiting – Limits to 10 create/update actions per minute per user
+- Error Handling – Graceful fallbacks via error boundaries and empty states
+- Tag Chips with Typeahead – For better lead tagging UX
+- Dashboard – Personalized view of leads owned by the logged-in user
+- Responsive UI – Built with Tailwind CSS and shadcn/ui for clean, accessible design  
 
 ---
 
-## Nice-to-Haves Implemented
+## ✅What's Done
 
-- ✅ Tag chips with typeahead – Implemented using custom input with autocomplete UX.
-- ✅ Basic full-text search on fullName, email, notes – Implemented via server-side filters with debounced input.
-- ✅ Status quick-actions (dropdown in table) – Added inline dropdown to change status from the lead list table.
-
-## Quality Bar Implemented
-
-- ✅ Simple rate limit on create/update (per user) – Enforced via Supabase RLS policies and custom logic limiting to 10 req/min/user.
-- ✅ Error boundary + empty state – Implemented via React ErrorBoundary and conditional rendering for no-leads case.
-- ✅ Accessibility basics – Labels, keyboard navigation, and basic ARIA attributes used (still needs more testing).
+- Lead CRUD with validation
+- CSV import/export (with error reporting)
+- Search/filter with server-side pagination
+- Role-based access (user/admin)
+- Change history per lead
 
 ## What's Skipped
 
@@ -118,17 +106,6 @@ This app enables users to:
 -  Rate limiting applied at API level based on authenticated user context
 -  UI built with shadcn/ui + Tailwind for clean, accessible, and responsive design enhanced by smooth UX features
 
- ---
-
-## 🌟 Key Learnings & Skills Demonstrated
-
--  Integrating Next.js App Router with Prisma and server-side rendering
--  Implementing robust validation with Zod across client and server
--  Managing authentication and authorization securely with Supabase Auth
--  Handling data concurrency and maintaining audit trails via change history
--  Building user-friendly CSV import/export with detailed validation feedback
--  Applying rate limiting and error boundaries for production readiness
--  Designing and enforcing role-based access control
 
 ---
 
