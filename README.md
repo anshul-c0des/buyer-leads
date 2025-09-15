@@ -78,7 +78,7 @@ This app enables users to:
 ---
 
 
-🧠 Design Notes
+## 🧠 Design Notes
 
 -  Validation via Zod schemas on both client and server for consistent data integrity
 -  Server-side rendered lead list with real pagination and URL-synced filters
