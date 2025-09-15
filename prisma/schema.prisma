@@ -9,27 +9,27 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id          String   @id @default(uuid())
-  supabaseId  String   @unique
-  name        String  @db.VarChar(80)
-  email       String   @unique @db.VarChar(255)
-  phone       String  @db.VarChar(15)
-  role        Role     @default(USER)
-  createdAt   DateTime @default(now())
-  buyers      Buyer[]  @relation("UserBuyers")
+model User {   // User model to hold user'd details (for auth)
+  id         String   @id @default(uuid())
+  supabaseId String   @unique
+  name       String   @db.VarChar(80)
+  email      String   @unique @db.VarChar(255)
+  phone      String   @db.VarChar(15)
+  role       Role     @default(USER)
+  createdAt  DateTime @default(now())
+  buyers     Buyer[]  @relation("UserBuyers")
 }
 
-enum Role {
+enum Role {   // RBAC
   USER
   ADMIN
 }
 
-model Buyer {
-  id           String     @id @default(uuid())
-  fullName     String     @db.VarChar(80)
-  email        String?    @db.VarChar(255)
-  phone        String     @db.VarChar(15)
+model Buyer {   // Buyer/Leads Model 
+  id           String       @id @default(uuid())
+  fullName     String       @db.VarChar(80)
+  email        String?      @db.VarChar(255)
+  phone        String       @db.VarChar(15)
   city         City
   propertyType PropertyType
   bhk          BHK?
@@ -38,27 +38,26 @@ model Buyer {
   budgetMax    Int?
   timeline     Timeline
   source       Source
-  status       Status     @default(New)
-  notes        String?    @db.Text
+  status       Status       @default(New)
+  notes        String?      @db.Text
   tags         String[]
   ownerId      String
-  owner        User       @relation(fields: [ownerId], references: [id], name: "UserBuyers")
-  updatedAt    DateTime   @updatedAt
+  owner        User         @relation(fields: [ownerId], references: [id], name: "UserBuyers")   // ref to users model
+  updatedAt    DateTime     @updatedAt
 
-  history      BuyerHistory[]
+  history BuyerHistory[]
 
   @@index([phone])
   @@index([email])
 }
 
-
-model BuyerHistory {
-  id         String   @id @default(uuid())
-  buyer      Buyer    @relation(fields: [buyerId], references: [id], onDelete: Cascade)
-  buyerId    String
-  changedBy  String
-  changedAt  DateTime @default(now())
-  diff       Json
+model BuyerHistory {   // Buyer History model to hold recent changes
+  id        String   @id @default(uuid())
+  buyer     Buyer    @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  buyerId   String
+  changedBy String
+  changedAt DateTime @default(now())
+  diff      Json
 }
 
 enum City {
@@ -84,7 +83,6 @@ enum BHK {
   Three
   Four
 }
-
 
 enum Purpose {
   Buy

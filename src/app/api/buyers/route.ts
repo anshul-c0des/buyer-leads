@@ -1,17 +1,22 @@
-import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { buyerSchema } from '@/lib/zod/buyerSchema'
-import { ZodError } from 'zod'
-import { mapBhkToPrisma, mapSourceToPrisma, mapTimelineToPrisma } from '@/lib/bhkMapping'
-import { createClient } from '@supabase/supabase-js'
-import { checkRateLimit } from '@/lib/rateLimiter'
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { buyerSchema } from "@/lib/zod/buyerSchema";
+import { ZodError } from "zod";
+import {
+  mapBhkToPrisma,
+  mapSourceToPrisma,
+  mapTimelineToPrisma,
+} from "@/lib/bhkMapping";
+import { createClient } from "@supabase/supabase-js";
+import { checkRateLimit } from "@/lib/rateLimiter";
 
-const PAGE_SIZE = 10
+const PAGE_SIZE = 10;
 
+// GET api/buyers: fetches buyers with optional filters or search
 export async function GET(req: Request) {
-  const authHeader = req.headers.get('authorization')
-  const token = authHeader?.split(' ')[1]
-  let dbUser = null
+  const authHeader = req.headers.get("authorization");
+  const token = authHeader?.split(" ")[1];
+  let dbUser = null;
 
   if (token) {
     const supabase = createClient(
@@ -24,54 +29,57 @@ export async function GET(req: Request) {
           },
         },
       }
-    )
+    );
 
-    const { data: { user: supaUser }, error } = await supabase.auth.getUser()
+    const {
+      data: { user: supaUser },
+      error,
+    } = await supabase.auth.getUser();
 
     if (!error && supaUser) {
       dbUser = await prisma.user.findUnique({
         where: { supabaseId: supaUser.id },
-      })
+      });
     }
   }
 
-  // extract filters
-  const url = new URL(req.url)
-  const page = parseInt(url.searchParams.get('page') ?? '1')
-  const city = url.searchParams.get('city')
-  const propertyType = url.searchParams.get('propertyType')
-  const status = url.searchParams.get('status')
-  const timeline = url.searchParams.get('timeline')
-  const search = url.searchParams.get('search')
+  // extract filters and pagination parameters
+  const url = new URL(req.url);
+  const page = parseInt(url.searchParams.get("page") ?? "1");
+  const city = url.searchParams.get("city");
+  const propertyType = url.searchParams.get("propertyType");
+  const status = url.searchParams.get("status");
+  const timeline = url.searchParams.get("timeline");
+  const search = url.searchParams.get("search");
 
-  const filters: any = {}
-  if (city) filters.city = city
-  if (propertyType) filters.propertyType = propertyType
-  if (status) filters.status = status
-  if (timeline) filters.timeline = timeline
+  const filters: any = {};   // builds filters object
+  if (city) filters.city = city;
+  if (propertyType) filters.propertyType = propertyType;
+  if (status) filters.status = status;
+  if (timeline) filters.timeline = timeline;
 
-  const searchFilter = search
+  const searchFilter = search   // builds search object
     ? {
         OR: [
-          { fullName: { contains: search, mode: 'insensitive' } },
+          { fullName: { contains: search, mode: "insensitive" } },
           { phone: { contains: search } },
-          { email: { contains: search, mode: 'insensitive' } },
+          { email: { contains: search, mode: "insensitive" } },
         ],
       }
-    : {}
+    : {};
 
-  const where = { ...filters, ...searchFilter }
-  const PAGE_SIZE = 10
+  const where = { ...filters, ...searchFilter };
+  const PAGE_SIZE = 10;
 
-  const [total, buyers] = await Promise.all([
+  const [total, buyers] = await Promise.all([   // performs parallel queries for total count and paginated list
     prisma.buyer.count({ where }),
     prisma.buyer.findMany({
       where,
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { updatedAt: "desc" },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
     }),
-  ])
+  ]);
 
   return NextResponse.json({
     buyers,
@@ -79,20 +87,24 @@ export async function GET(req: Request) {
     page,
     pageSize: PAGE_SIZE,
     totalPages: Math.ceil(total / PAGE_SIZE),
-    user: dbUser ? { id: dbUser.id, role: dbUser.role, email: dbUser.email } : null,
-  })
+    user: dbUser
+      ? { id: dbUser.id, role: dbUser.role, email: dbUser.email }
+      : null,
+  });
 }
 
-
+//POST api/buyers: creates a new user in db
 export async function POST(req: Request) {
   try {
-    const authHeader = req.headers.get('authorization')
-    const token = authHeader?.split(' ')[1]
-    console.log("authHeader: ",authHeader);
-    
+    const authHeader = req.headers.get("authorization");
+    const token = authHeader?.split(" ")[1];
+    console.log("authHeader: ", authHeader);
 
     if (!token) {
-      return NextResponse.json({ success: false, message: 'Missing auth token' }, { status: 401 })
+      return NextResponse.json(
+        { success: false, message: "Missing auth token" },
+        { status: 401 }
+      );
     }
 
     const supabase = createClient(
@@ -105,30 +117,33 @@ export async function POST(req: Request) {
           },
         },
       }
-    )
+    );
 
     const {
       data: { user: supabaseUser },
       error: userError,
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser();
 
     if (userError || !supabaseUser) {
-      return NextResponse.json({ success: false, message: 'Not authenticated' }, { status: 401 })
+      return NextResponse.json(
+        { success: false, message: "Not authenticated" },
+        { status: 401 }
+      );
     }
 
     // Find your user in your DB
     const dbUser = await prisma.user.findUnique({
       where: { supabaseId: supabaseUser.id },
-    })
+    });
 
     if (!dbUser) {
       return NextResponse.json(
-        { success: false, message: 'User not found in DB' },
+        { success: false, message: "User not found in DB" },
         { status: 404 }
-      )
+      );
     }
 
-    const rateResult = checkRateLimit(dbUser.id, 10, 60 * 1000) // 10 requests per 60s
+    const rateResult = checkRateLimit(dbUser.id, 10, 60 * 1000); // 10 requests per 60s
     if (!rateResult.allowed) {
       return NextResponse.json(
         {
@@ -136,12 +151,12 @@ export async function POST(req: Request) {
           message: `Rate limit exceeded. Try again in ${rateResult.retryAfter}s.`,
         },
         { status: 429 }
-      )
+      );
     }
 
     // Validate body
-    const body = await req.json()
-    const data = buyerSchema.parse(body)
+    const body = await req.json();
+    const data = buyerSchema.parse(body);
 
     // Build buyer data
     const buyerData = {
@@ -151,42 +166,41 @@ export async function POST(req: Request) {
       source: mapSourceToPrisma(data.source),
       tags: data.tags,
       ownerId: dbUser.id,
-    }
+    };
 
-    const buyer = await prisma.buyer.create({
+    const buyer = await prisma.buyer.create({   // create new buyer record 
       data: buyerData,
-    })
+    });
 
-    await prisma.buyerHistory.create({
+    await prisma.buyerHistory.create({   // log in creation event
       data: {
         buyerId: buyer.id,
-        changedBy: supabaseUser.email || 'unknown',
+        changedBy: supabaseUser.email || "unknown",
         diff: { created: data },
       },
-    })
+    });
 
-    return NextResponse.json({ success: true, buyer })
+    return NextResponse.json({ success: true, buyer });
   } catch (error: any) {
     if (error instanceof ZodError) {
       return NextResponse.json(
         {
           success: false,
-          message: 'Validation error',
+          message: "Validation error",
           errors: error.errors,
         },
         { status: 400 }
-      )
+      );
     }
 
-    console.error(error)
+    console.error(error);
 
     return NextResponse.json(
       {
         success: false,
-        message: error?.message || 'Server Error',
+        message: error?.message || "Server Error",
       },
       { status: 500 }
-    )
+    );
   }
 }
-

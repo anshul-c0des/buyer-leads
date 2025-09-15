@@ -1,43 +1,42 @@
-import { BHK, Source, Timeline } from '@prisma/client'
+import { BHK, Source, Timeline } from "@prisma/client";
 
-const bhkMap: Record<string, BHK> = {
+const bhkMap: Record<string, BHK> = {   // BHK mappings
   Studio: BHK.Studio,
-  '1': BHK.One,
-  '2': BHK.Two,
-  '3': BHK.Three,
-  '4': BHK.Four,
-}
+  "1": BHK.One,
+  "2": BHK.Two,
+  "3": BHK.Three,
+  "4": BHK.Four,
+};
 
 export function mapBhkToPrisma(bhk?: string): BHK | null {
-  if (!bhk) return null
-  return bhkMap[bhk] ?? null
+  if (!bhk) return null;
+  return bhkMap[bhk] ?? null;
 }
 
-export const timelineMap: Record<string, Timeline> = {
-  'ZeroToThreeMonths': Timeline.ZeroToThreeMonths,
-  'ThreeToSixMonths': Timeline.ThreeToSixMonths,
-  'MoreThanSixMonths': Timeline.MoreThanSixMonths,
+export const timelineMap: Record<string, Timeline> = {   // Timeline Mappings
+  ZeroToThreeMonths: Timeline.ZeroToThreeMonths,
+  ThreeToSixMonths: Timeline.ThreeToSixMonths,
+  MoreThanSixMonths: Timeline.MoreThanSixMonths,
   Exploring: Timeline.Exploring,
-}
+};
 
 export function mapTimelineToPrisma(t?: string): Timeline {
   if (!t || !(t in timelineMap)) {
-    throw new Error(`Invalid timeline value: ${t}`)
+    throw new Error(`Invalid timeline value: ${t}`);
   }
-  return timelineMap[t]
+  return timelineMap[t];
 }
 
-
-export const sourceMap: Record<string, Source> = {
+export const sourceMap: Record<string, Source> = {   // Source Mappings
   Website: Source.Website,
   Referral: Source.Referral,
-  'WalkIn': Source.WalkIn,
+  WalkIn: Source.WalkIn,
   Call: Source.Call,
   Other: Source.Other,
-}
+};
 export function mapSourceToPrisma(s?: string): Source {
   if (!s || !(s in sourceMap)) {
-    throw new Error(`Invalid source value: ${s}`)
+    throw new Error(`Invalid source value: ${s}`);
   }
-  return sourceMap[s]
+  return sourceMap[s];
 }

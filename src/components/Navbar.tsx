@@ -1,101 +1,111 @@
-"use client"
+"use client";
 
-import React, { useState, useEffect } from "react"
-import Link from "next/link"
-import { useRouter, usePathname } from "next/navigation"
-import { supabase } from "@/lib/supabaseClient"
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter, usePathname } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
-} from "@/components/ui/dropdown-menu"
-import { Button } from "@/components/ui/button"
-import Image from "next/image"
-import { BadgePlus, LayoutDashboard, LogOut, ArrowLeft } from "lucide-react"
-import { toast } from "sonner"
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
+import Image from "next/image";
+import { BadgePlus, LayoutDashboard, LogOut, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Navbar() {
-  const router = useRouter()
-  const pathname = usePathname()
-  const [user, setUser] = useState<{ email: string | null; initial: string | null } | null>(null)
-  const [authLoading, setAuthLoading] = useState(true)
+  const router = useRouter();
+  const pathname = usePathname();
 
-  useEffect(() => {
+  const [user, setUser] = useState<{   // holds email and initial letter, null if not authenticated
+    email: string | null;
+    initial: string | null;
+  } | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);   // auth status
+
+  useEffect(() => {   // fetch current user info
     async function fetchUser() {
       try {
-        const { data: { session } } = await supabase.auth.getSession()
-        const token = session?.access_token
-  
+        const {
+          data: { session },
+        } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
         if (!token) {
-          setUser(null)
-          return
+          setUser(null);
+          return;
         }
-  
+
         const res = await fetch("/api/auth/me", {
           headers: { Authorization: `Bearer ${token}` },
-        })
-  
+        });
+
         if (!res.ok) {
-          setUser(null)
-          return
+          setUser(null);
+          return;
         }
-  
-        const data = await res.json()
-        const name = data.name || data.email || "?"
-  
+
+        const data = await res.json();
+        const name = data.name || data.email || "?";
+
         setUser({
           email: data.email,
           initial: name.charAt(0).toUpperCase(),
-        })
+        });
       } catch (err) {
-        setUser(null)
+        setUser(null);
       } finally {
-        setAuthLoading(false)
+        setAuthLoading(false);
       }
     }
-  
-    fetchUser()
-  
-    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
-      fetchUser()
-    })
-  
-    return () => {
-      authListener.subscription.unsubscribe()
-    }
-  }, [])  
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
-    setUser(null)
-    router.push("/buyers")
-    toast.success("Logged out successfully!")
+    fetchUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(() => {
+      fetchUser();
+    });
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
+
+  async function handleLogout() {   // handles logout
+    await supabase.auth.signOut();
+    setUser(null);
+    router.push("/buyers");
+    toast.success("Logged out successfully!");
   }
 
-  const onLoginPage = pathname === "/login"
-  const onSignupPage = pathname === "/sign-up"
+  const onLoginPage = pathname === "/login";   // login page flag
+  const onSignupPage = pathname === "/sign-up";   // sign-up page flag
 
-  const showBackButton = pathname !== "/buyers"
+  const showBackButton = pathname !== "/buyers";
 
   return (
     <nav className="w-full bg-white border-b border-gray-200">
       <div className="max-w-6xl mx-auto px-6 sm:px-12 py-4 flex justify-between items-center">
         <div className="flex items-center gap-3">
-        {showBackButton && (
-          <button
-            onClick={() => router.back()}
-            aria-label="Go back"
-            className="p-1.5 bg-blue-50 hover:bg-blue-100 rounded-full transition"
-          >
-            <ArrowLeft className="w-6 h-6 mt-1 text-blue-700" />
-          </button>
-        )}
-
+          {showBackButton && (
+            <button
+              onClick={() => router.back()}
+              aria-label="Go back"
+              className="p-1.5 bg-blue-50 hover:bg-blue-100 rounded-full transition mt-1"
+            >
+              <ArrowLeft className="w-6 h-6 text-blue-700" />
+            </button>
+          )}
 
           <Link href="/buyers">
             <div className="flex items-center gap-1 cursor-pointer">
-              <Image src="/logo.png" alt="BuyerBase Logo" width={35} height={35} />
+              <Image
+                src="/logo.png"
+                alt="BuyerBase Logo"
+                width={35}
+                height={35}
+              />
               <h1 className="text-3xl font-bold text-blue-500">Buyers Base</h1>
             </div>
           </Link>
@@ -103,7 +113,11 @@ export default function Navbar() {
 
         <div className="flex items-center gap-4">
           {user && (
-            <Button variant="secondary" className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white" onClick={() => router.push("/buyers/new")}>
+            <Button
+              variant="secondary"
+              className="cursor-pointer bg-blue-500 hover:bg-blue-600 text-white"
+              onClick={() => router.push("/buyers/new")}
+            >
               <BadgePlus /> Add Lead
             </Button>
           )}
@@ -122,7 +136,10 @@ export default function Navbar() {
                 <DropdownMenuItem onClick={() => router.push("/dashboard")}>
                   <LayoutDashboard /> Dashboard
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout} className="text-red-500 hover:text-red-700">
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="text-red-500 hover:text-red-700"
+                >
                   <LogOut className="text-current hover:text-red-800" /> Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -130,17 +147,26 @@ export default function Navbar() {
           ) : (
             <>
               {onLoginPage && (
-                <Button className="cursor-pointer bg-blue-500 hover:bg-blue-600" onClick={() => router.push("/sign-up")}>
+                <Button
+                  className="cursor-pointer bg-blue-500 hover:bg-blue-600"
+                  onClick={() => router.push("/sign-up")}
+                >
                   Sign Up
                 </Button>
               )}
               {onSignupPage && (
-                <Button className="cursor-pointer bg-blue-500 hover:bg-blue-600" onClick={() => router.push("/login")}>
+                <Button
+                  className="cursor-pointer bg-blue-500 hover:bg-blue-600"
+                  onClick={() => router.push("/login")}
+                >
                   Login
                 </Button>
               )}
               {!onLoginPage && !onSignupPage && (
-                <Button className="cursor-pointer bg-blue-500 hover:bg-blue-600" onClick={() => router.push("/login")}>
+                <Button
+                  className="cursor-pointer bg-blue-500 hover:bg-blue-600"
+                  onClick={() => router.push("/login")}
+                >
                   Login
                 </Button>
               )}
@@ -149,5 +175,5 @@ export default function Navbar() {
         </div>
       </div>
     </nav>
-  )
+  );
 }

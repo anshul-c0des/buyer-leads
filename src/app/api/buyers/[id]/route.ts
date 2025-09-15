@@ -1,10 +1,15 @@
-import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
-import { buyerSchema } from '@/lib/zod/buyerSchema'
-import { mapBhkToPrisma, mapTimelineToPrisma, mapSourceToPrisma } from '@/lib/bhkMapping'
-import { getAuthenticatedUser } from '@/lib/auth'
-import { checkRateLimit } from '@/lib/rateLimiter'
+import { NextRequest, NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { buyerSchema } from "@/lib/zod/buyerSchema";
+import {
+  mapBhkToPrisma,
+  mapTimelineToPrisma,
+  mapSourceToPrisma,
+} from "@/lib/bhkMapping";
+import { getAuthenticatedUser } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rateLimiter";
 
+// GET api/buyers/[id]: fetches single buyer (no auth check, anyone can view other leads/buyers)
 export async function GET(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -18,32 +23,42 @@ export async function GET(
     });
 
     if (!buyer) {
-      return NextResponse.json({ success: false, message: 'Buyer not found' }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Buyer not found" },
+        { status: 404 }
+      );
     }
 
     return NextResponse.json({ success: true, buyer });
   } catch (error: unknown) {
     console.error(error);
-    return NextResponse.json({ success: false, message: 'Server error' }, { status: 500 });
+    return NextResponse.json(
+      { success: false, message: "Server error" },
+      { status: 500 }
+    );
   }
 }
 
+// POST api/buyers/[id]: create a new lead
 export async function POST(req: NextRequest) {
-  console.log("POST /api/buyers received:", req)
+  console.log("POST /api/buyers received:", req);
   try {
-    const user = await getAuthenticatedUser(req)
+    const user = await getAuthenticatedUser(req);
     if (!user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const body = await req.json()
-    const data = buyerSchema.parse(body)
+    const body = await req.json();
+    const data = buyerSchema.parse(body);
 
-    const bhk = mapBhkToPrisma(data.bhk)
-    const timeline = mapTimelineToPrisma(data.timeline)
-    const source = mapSourceToPrisma(data.source)
+    const bhk = mapBhkToPrisma(data.bhk);
+    const timeline = mapTimelineToPrisma(data.timeline);
+    const source = mapSourceToPrisma(data.source);
 
-    const newBuyer = await prisma.buyer.create({ 
+    const newBuyer = await prisma.buyer.create({
       data: {
         ...data,
         bhk,
@@ -52,18 +67,22 @@ export async function POST(req: NextRequest) {
         ownerId: user.id,
         tags: data.tags,
       },
-    })
+    });
 
-    return NextResponse.json({ success: true, ownerId: user.id }, { status: 201 })
-  } catch (error: any) {
-    console.error("POST /api/buyers error:", error)
     return NextResponse.json(
-      { success: false, message: error?.message || 'Server Error' },
+      { success: true, ownerId: user.id },
+      { status: 201 }
+    );
+  } catch (error: any) {
+    console.error("POST /api/buyers error:", error);
+    return NextResponse.json(
+      { success: false, message: error?.message || "Server Error" },
       { status: 500 }
-    )
+    );
   }
 }
 
+// PUT api/buyers/[id]: updates existing buyer
 export async function PUT(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
@@ -71,10 +90,13 @@ export async function PUT(
   try {
     const user = await getAuthenticatedUser(req);
     if (!user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 });
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const rateResult = checkRateLimit(user.id, 10, 60 * 1000);
+    const rateResult = checkRateLimit(user.id, 10, 60 * 1000);   // rate limiter: 10 req per min
     if (!rateResult.allowed) {
       return NextResponse.json(
         {
@@ -92,19 +114,26 @@ export async function PUT(
 
     const existing = await prisma.buyer.findUnique({ where: { id } });
     if (!existing) {
-      return NextResponse.json({ success: false, message: 'Buyer not found' }, { status: 404 });
+      return NextResponse.json(
+        { success: false, message: "Buyer not found" },
+        { status: 404 }
+      );
     }
 
-    if (existing.ownerId !== user.id && user.role !== 'ADMIN') {
-      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 });
+    if (existing.ownerId !== user.id && user.role !== "ADMIN") {
+      return NextResponse.json(
+        { success: false, message: "Forbidden" },
+        { status: 403 }
+      );
     }
 
     if (
       body.updatedAt &&
-      new Date(body.updatedAt).toISOString() !== existing.updatedAt.toISOString()
+      new Date(body.updatedAt).toISOString() !==
+        existing.updatedAt.toISOString()
     ) {
       return NextResponse.json(
-        { success: false, message: 'Record changed, please refresh.' },
+        { success: false, message: "Record changed, please refresh." },
         { status: 409 }
       );
     }
@@ -125,7 +154,7 @@ export async function PUT(
     await prisma.buyerHistory.create({
       data: {
         buyerId: id,
-        changedBy: user.email || 'unknown',
+        changedBy: user.email || "unknown",
         diff: {
           before: existing,
           after: updated,
@@ -137,41 +166,51 @@ export async function PUT(
   } catch (error: any) {
     console.error(error);
     return NextResponse.json(
-      { success: false, message: error?.message || 'Server Error' },
+      { success: false, message: error?.message || "Server Error" },
       { status: 500 }
     );
   }
 }
 
+// DELETE api/buyers/[id]: delete a lead
 export async function DELETE(
   req: NextRequest,
   context: { params: Promise<{ id: string }> }
 ) {
   try {
-    const user = await getAuthenticatedUser(req)
+    const user = await getAuthenticatedUser(req);
     if (!user) {
-      return NextResponse.json({ success: false, message: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
     }
 
-    const { id } = await context.params
+    const { id } = await context.params;
 
-    const existing = await prisma.buyer.findUnique({ where: { id } })
+    const existing = await prisma.buyer.findUnique({ where: { id } });
     if (!existing) {
-      return NextResponse.json({ success: false, message: 'Buyer not found' }, { status: 404 })
+      return NextResponse.json(
+        { success: false, message: "Buyer not found" },
+        { status: 404 }
+      );
     }
 
-    if (existing.ownerId !== user.id && user.role !== 'ADMIN') {
-      return NextResponse.json({ success: false, message: 'Forbidden' }, { status: 403 })
+    if (existing.ownerId !== user.id && user.role !== "ADMIN") {
+      return NextResponse.json(
+        { success: false, message: "Forbidden" },
+        { status: 403 }
+      );
     }
 
-    await prisma.buyer.delete({ where: { id } })
+    await prisma.buyer.delete({ where: { id } });
 
-    return NextResponse.json({ success: true })
+    return NextResponse.json({ success: true });
   } catch (error: any) {
-    console.error(error)
+    console.error(error);
     return NextResponse.json(
       { success: false, message: error?.message || "Server Error" },
       { status: 500 }
-    )
+    );
   }
 }
